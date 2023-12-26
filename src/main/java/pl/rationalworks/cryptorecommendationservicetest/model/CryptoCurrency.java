@@ -21,7 +21,7 @@ public class CryptoCurrency {
     @EmbeddedId
     private CryptoCurrencyId id;
 
-    @Column(name = "price", nullable = false)
+    @Column(name = "price", nullable = false, precision = 14, scale = 6)
     private BigDecimal price;
 
 }

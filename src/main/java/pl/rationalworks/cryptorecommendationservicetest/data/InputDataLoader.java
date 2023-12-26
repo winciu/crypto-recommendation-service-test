@@ -10,9 +10,9 @@ import java.time.Instant;
 import java.util.List;
 
 @Component
-public class InputDataScanner {
+public class InputDataLoader {
 
-    public List<CsvDataRecord> loadFile(InputStream inputStream) throws IOException {
+    public List<CsvDataRecord> loadFromFile(InputStream inputStream) throws IOException {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream))) {
             CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
                     .setHeader(Headers.class)

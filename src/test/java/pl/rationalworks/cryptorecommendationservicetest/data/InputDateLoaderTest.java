@@ -10,13 +10,13 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-public class InputDateScannerTest {
+public class InputDateLoaderTest {
 
     @Test
     void shouldLoadTestDataFromCSVFileProperly() throws IOException {
         try (InputStream inputStream = getClass().getResourceAsStream("/ETH_values_test.csv")) {
-            InputDataScanner inputDataScanner = new InputDataScanner();
-            List<CsvDataRecord> records = inputDataScanner.loadFile(inputStream);
+            InputDataLoader inputDataLoader = new InputDataLoader();
+            List<CsvDataRecord> records = inputDataLoader.loadFromFile(inputStream);
             List<String> symbols = records.stream().map(CsvDataRecord::symbol).distinct().toList();
             List<Instant> instants = records.stream().map(CsvDataRecord::timestamp).toList();
             assertThat(symbols, hasItem("ETH"));
