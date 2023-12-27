@@ -22,7 +22,7 @@ public class CryptoCurrencyProcessingScheduler {
 
     @Scheduled(cron = "${service.scheduling.cron}", zone = "${service.scheduling.timezone}")
     public void startCryptoProcessing() {
-        LocalDate date = LocalDate.now().minusDays(1); // yesterday
+        LocalDate date = LocalDate.now().minusDays(1); // yesterday (by default)
         List<LocalDate> predefinedDates = schedulingProperties.getPredefinedDates();
         log.info("Predefined date list has {} items", predefinedDates.size());
         if (!predefinedDates.isEmpty()) {
@@ -41,5 +41,13 @@ public class CryptoCurrencyProcessingScheduler {
         log.info("Scheduled task UPDATE_MIN_MAX_FACTORS with for {} started ...", date);
         service.updateMinMaxFactorValuesForGivenDay(date);
         log.info("Scheduled task UPDATE_MIN_MAX_FACTORS with for {} finished.", date);
+    }
+
+    private void updateMinPriceFactors(LocalDate date) {
+
+    }
+
+    private void updateMaxPriceFactors(LocalDate date) {
+
     }
 }

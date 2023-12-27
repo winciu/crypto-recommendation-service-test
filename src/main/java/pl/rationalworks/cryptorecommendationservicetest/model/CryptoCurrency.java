@@ -5,27 +5,35 @@ import lombok.*;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRecord;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @NamedNativeQueries({
     @NamedNativeQuery(name = "selectMinMaxPricesByDayGroupBySymbol",
         query = """
             select min(price) as minPrice, max(price) as maxPrice, symbol
             from crypto_currencies
-            where FORMATDATETIME(timestamp,'yyyy-MM-dd') = ':date' 
+            where date = :date 
             group by symbol""",
         resultSetMapping = "minMaxValuesGroupBySymbolMapping"),
     @NamedNativeQuery(name = "selectDailyMinPrice",
         query = """
-            select * 
+            select *
             from crypto_currencies
             where timestamp in (
-                 select
-                    min(timestamp)
-                from
-                    crypto_currencies
-                where
-                    FORMATDATETIME(timestamp, 'yyyy-MM-dd') = ':date'
-                 group by symbol);
+                select min(timestamp)
+                from crypto_currencies
+                where date = :date
+                group by symbol);
+            """),
+    @NamedNativeQuery(name = "selectDailyMaxPrice",
+        query = """
+            select *
+            from crypto_currencies
+            where timestamp in (
+                select max(timestamp)
+                from crypto_currencies
+                where date = :date
+                group by symbol);
             """)
 })
 @SqlResultSetMappings(
@@ -55,6 +63,9 @@ public class CryptoCurrency {
 
     @EmbeddedId
     private CryptoCurrencyId id;
+
+    @Column(name = "date", nullable = false, updatable = false)
+    private LocalDate date;
 
     @Column(name = "price", nullable = false, precision = 14, scale = 5)
     private BigDecimal price;

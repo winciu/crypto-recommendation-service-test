@@ -15,7 +15,7 @@ import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRe
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,16 +35,14 @@ public class CryptoCurrencyService {
         List<CryptoCurrency> cryptoCurrencies = dataRecords.stream()
                 .map(r -> {
                     CryptoCurrencyId id = new CryptoCurrencyId(r.timestamp(), r.symbol());
-                    return new CryptoCurrency(id, r.price());
+                    return new CryptoCurrency(id, LocalDate.ofInstant(r.timestamp(), ZoneId.of("GMT")), r.price());
                 })
                 .toList();
         cryptoCurrencyRepository.saveAll(cryptoCurrencies);
     }
 
     private Map<DailyRecentFactorId, CryptoDailyRecentFactors> calculateMinMaxValuesForGivenDay(LocalDate date) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        log.info("Fetching min/max values for {} ...", date.format(formatter));
-        List<DailyMinMaxRecord> records = cryptoCurrencyRepository.fetchMinMaxValuesForGivenDay(date.format(formatter));
+        List<DailyMinMaxRecord> records = cryptoCurrencyRepository.fetchMinMaxValuesForGivenDay(date);
         log.info("fetched {} new daily factors", records.size());
         return records.stream()
             .map(record -> {
