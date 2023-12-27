@@ -2,10 +2,11 @@ package pl.rationalworks.cryptorecommendationservicetest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import pl.rationalworks.cryptorecommendationservicetest.data.CsvDataRecord;
 import pl.rationalworks.cryptorecommendationservicetest.data.InputDataLoader;
@@ -15,7 +16,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class CryptoRecommendationServiceApplication {
 
+	@Value("${service.input-data-path}")
+	private Resource resourceFile;
 
 	/**
 	 * We need to load input data during application startup.
@@ -36,9 +38,8 @@ public class CryptoRecommendationServiceApplication {
 	 */
 	@Bean
 	InitializingBean loadInputData(InputDataLoader dataLoader, CryptoCurrencyService service) throws IOException {
-		ClassPathResource classPathResource = new ClassPathResource("static/Prices");
 		Set<String> filePaths;
-		try (Stream<Path> stream = Files.walk(Paths.get(classPathResource.getURI()), 1)) {
+		try (Stream<Path> stream = Files.walk(resourceFile.getFile().toPath(), 1)) {
 			filePaths = stream
 					.filter(file -> !Files.isDirectory(file))
 					.map(Path::toAbsolutePath)
