@@ -36,6 +36,8 @@ public class CryptoCurrencyProcessingScheduler {
             predefinedDates.remove(0);
         }
         updateMinMaxFactors(date);
+        updateDailyOldestPriceFactors(date);
+        updateDailyNewestPriceFactors(date);
     }
 
     /**
@@ -44,16 +46,20 @@ public class CryptoCurrencyProcessingScheduler {
      * @param date a {@link LocalDate} instance for which data processing should take place
      */
     private void updateMinMaxFactors(LocalDate date) {
-        log.info("Scheduled task UPDATE_MIN_MAX_FACTORS with for {} started ...", date);
+        log.info("Scheduled task UPDATE_MIN_MAX_FACTORS for {} started ...", date);
         service.updateMinMaxFactorValuesForGivenDay(date);
-        log.info("Scheduled task UPDATE_MIN_MAX_FACTORS with for {} finished.", date);
+        log.info("Scheduled task UPDATE_MIN_MAX_FACTORS for {} finished.", date);
     }
 
-    private void updateMinPriceFactors(LocalDate date) {
-
+    private void updateDailyOldestPriceFactors(LocalDate date) {
+        log.info("Scheduled task UPDATE_DAILY_OLDEST_PRICE for {} started ...", date);
+        service.updateDailyOldestPriceFactors(date);
+        log.info("Scheduled task UPDATE_DAILY_OLDEST_PRICE for {} finished.", date);
     }
 
-    private void updateMaxPriceFactors(LocalDate date) {
-
+    private void updateDailyNewestPriceFactors(LocalDate date) {
+        log.info("Scheduled task UPDATE_DAILY_NEWEST_PRICE for {} started ...", date);
+        service.updateDailyNewestPriceFactors(date);
+        log.info("Scheduled task UPDATE_DAILY_NEWEST_PRICE for {} finished.", date);
     }
 }

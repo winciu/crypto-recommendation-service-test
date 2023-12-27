@@ -9,8 +9,7 @@ import pl.rationalworks.cryptorecommendationservicetest.model.CryptoDailyRecentF
 import pl.rationalworks.cryptorecommendationservicetest.model.DailyRecentFactorId;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
+import java.time.Instant;
 
 @Repository
 public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyRecentFactors, DailyRecentFactorId> {
@@ -23,4 +22,24 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
     void updateMinMaxFactorsByDate(@Param("id") DailyRecentFactorId id,
                                    @Param("minPrice") BigDecimal minPrice,
                                    @Param("maxPrice") BigDecimal maxPrice);
+
+    @Modifying
+    @Query(value = """
+        UPDATE CryptoDailyRecentFactors f
+        SET f.oldestPrice = :oldestPrice, f.oldestPriceDate = :oldestPriceDate
+        WHERE f.id = :id
+        """)
+    void updateOldestPriceFactors(@Param("id") DailyRecentFactorId id,
+                                  @Param("oldestPrice") BigDecimal oldestPrice,
+                                  @Param("oldestPriceDate") Instant oldestPriceDate);
+
+    @Modifying
+    @Query(value = """
+        UPDATE CryptoDailyRecentFactors f
+        SET f.newestPrice = :newestPrice, f.newestPriceDate = :newestPriceDate
+        WHERE f.id = :id
+        """)
+    void updateNewestPriceFactors(@Param("id") DailyRecentFactorId id,
+                                  @Param("newestPrice") BigDecimal newestPrice,
+                                  @Param("newestPriceDate") Instant newestPriceDate);
 }

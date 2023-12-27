@@ -44,12 +44,6 @@ public class CryptoDailyRecentFactors {
     @Column(name = "newest_price_date")
     private Instant newestPriceDate;
     /**
-     * This field is currently not used since we do not have input data for it.
-     * Could be used in the future to hold single, final value of a price at the end of the day.
-     */
-    @Column(name = "final_price")
-    private BigDecimal finalPrice;
-    /**
      * This property stores a normalized weekly factor for a given currency. Here 'weekly' means a week period to date.
      * That means that this factor is calculated using a data from a 7 days back up to now (that is, the current date which is an
      * id.referenceDate).
@@ -64,9 +58,21 @@ public class CryptoDailyRecentFactors {
     @Column(name = "month_normalized_factor")
     private BigDecimal monthNormalizedFactor;
 
-    public CryptoDailyRecentFactors(DailyRecentFactorId id, BigDecimal minPrice, BigDecimal maxPrice) {
-        this.id = id;
-        this.minPrice = minPrice;
-        this.maxPrice = maxPrice;
+    public static CryptoDailyRecentFactors setupMinMaxPriceFactors(DailyRecentFactorId id, BigDecimal minPrice,
+                                                                   BigDecimal maxPrice) {
+        return new CryptoDailyRecentFactors(id, minPrice, maxPrice, null, null,
+            null, null, null, null);
+    }
+
+    public static CryptoDailyRecentFactors setupOldestPriceFactors(DailyRecentFactorId id,
+                                                                   BigDecimal oldestPrice, Instant oldestPriceDate) {
+        return new CryptoDailyRecentFactors(id, null, null, oldestPrice, oldestPriceDate, null,
+            null, null, null);
+    }
+
+    public static CryptoDailyRecentFactors setupNewestPriceFactors(DailyRecentFactorId id,
+                                                                   BigDecimal newestPrice, Instant newestPriceDate) {
+        return new CryptoDailyRecentFactors(id, null, null, null, null,
+            newestPrice, newestPriceDate, null, null);
     }
 }

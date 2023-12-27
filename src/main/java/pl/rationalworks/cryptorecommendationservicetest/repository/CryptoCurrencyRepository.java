@@ -18,13 +18,13 @@ public interface CryptoCurrencyRepository extends CrudRepository<CryptoCurrency,
      * @return list of records with selected min/max value for particular day and cryptocurrency
      */
     @Query(name = "selectMinMaxPricesByDayGroupBySymbol", nativeQuery = true)
-    List<DailyMinMaxRecord> fetchMinMaxValuesForGivenDay(@Param("date") LocalDate date);
+    List<DailyMinMaxRecord> fetchMinMaxPricesForGivenDay(@Param("date") LocalDate date);
 
-    @Query(name = "selectDailyMinPrice", nativeQuery = true)
-    List<CryptoCurrency> fetchDailyMinPrice(@Param("date") LocalDate date);
+    @Query(name = "selectDailyOldestPrice", nativeQuery = true)
+    List<CryptoCurrency> fetchDailyOldestPrice(@Param("date") LocalDate date);
 
-    @Query(name = "selectDailyMaxPrice", nativeQuery = true)
-    List<CryptoCurrency> fetchDailyMaxPrice(@Param("date") LocalDate date);
+    @Query(name = "selectDailyNewestPrice", nativeQuery = true)
+    List<CryptoCurrency> fetchDailyNewestPrice(@Param("date") LocalDate date);
 }
 
 

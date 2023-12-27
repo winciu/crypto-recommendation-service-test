@@ -15,26 +15,34 @@ import java.time.LocalDate;
             where date = :date 
             group by symbol""",
         resultSetMapping = "minMaxValuesGroupBySymbolMapping"),
-    @NamedNativeQuery(name = "selectDailyMinPrice",
+    @NamedNativeQuery(name = "selectDailyOldestPrice",
         query = """
-            select *
-            from crypto_currencies
-            where timestamp in (
-                select min(timestamp)
-                from crypto_currencies
-                where date = :date
-                group by symbol);
-            """),
-    @NamedNativeQuery(name = "selectDailyMaxPrice",
+            WITH OLDEST(oldest_date, symbol) AS
+                     (select min(timestamp) as oldest_date, symbol
+                      from crypto_currencies
+                      where date = :date
+                      group by symbol)
+            select cc.*
+            from crypto_currencies cc,
+                 OLDEST o
+            where cc.timestamp = o.oldest_date
+              AND cc.symbol = o.symbol;
+            """,
+        resultClass = CryptoCurrency.class),
+    @NamedNativeQuery(name = "selectDailyNewestPrice",
         query = """
-            select *
-            from crypto_currencies
-            where timestamp in (
-                select max(timestamp)
-                from crypto_currencies
-                where date = :date
-                group by symbol);
-            """)
+            WITH NEWEST(newest_date, symbol) AS
+                     (select max(timestamp) as newest_date, symbol
+                      from crypto_currencies
+                      where date = :date
+                      group by symbol)
+            select cc.*
+            from crypto_currencies cc,
+                 NEWEST n
+            where cc.timestamp = n.newest_date
+              AND cc.symbol = n.symbol;
+            """,
+        resultClass = CryptoCurrency.class)
 })
 @SqlResultSetMappings(
     @SqlResultSetMapping(
