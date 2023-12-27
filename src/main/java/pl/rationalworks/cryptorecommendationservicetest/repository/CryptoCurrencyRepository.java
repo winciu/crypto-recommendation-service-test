@@ -18,6 +18,9 @@ public interface CryptoCurrencyRepository extends CrudRepository<CryptoCurrency,
      */
     @Query(name = "selectMinMaxPricesByDayGroupBySymbol", nativeQuery = true)
     List<DailyMinMaxRecord> fetchMinMaxValuesForGivenDay(@Param("date") String date);
+
+    @Query(name = "selectDailyMinPrice", nativeQuery = true)
+    List<CryptoCurrency> fetchDailyMinPrice(@Param("date") String date);
 }
 
 

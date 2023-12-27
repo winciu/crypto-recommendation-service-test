@@ -6,15 +6,28 @@ import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRe
 
 import java.math.BigDecimal;
 
-@NamedNativeQueries(
+@NamedNativeQueries({
     @NamedNativeQuery(name = "selectMinMaxPricesByDayGroupBySymbol",
         query = """
             select min(price) as minPrice, max(price) as maxPrice, symbol
             from crypto_currencies
             where FORMATDATETIME(timestamp,'yyyy-MM-dd') = ':date' 
             group by symbol""",
-        resultSetMapping = "minMaxValuesGroupBySymbolMapping")
-)
+        resultSetMapping = "minMaxValuesGroupBySymbolMapping"),
+    @NamedNativeQuery(name = "selectDailyMinPrice",
+        query = """
+            select * 
+            from crypto_currencies
+            where timestamp in (
+                 select
+                    min(timestamp)
+                from
+                    crypto_currencies
+                where
+                    FORMATDATETIME(timestamp, 'yyyy-MM-dd') = ':date'
+                 group by symbol);
+            """)
+})
 @SqlResultSetMappings(
     @SqlResultSetMapping(
         name = "minMaxValuesGroupBySymbolMapping",
