@@ -41,10 +41,10 @@ public class CryptoRecommendationServiceApplication {
 		Set<String> filePaths;
 		try (Stream<Path> stream = Files.walk(resourceFile.getFile().toPath(), 1)) {
 			filePaths = stream
-					.filter(file -> !Files.isDirectory(file))
-					.map(Path::toAbsolutePath)
-					.map(Path::toString)
-					.collect(Collectors.toSet());
+				.filter(file -> !Files.isDirectory(file))
+				.map(Path::toAbsolutePath)
+				.map(Path::toString)
+				.collect(Collectors.toSet());
 		}
 		return () -> {
 			filePaths.forEach(path -> {

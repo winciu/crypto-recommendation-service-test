@@ -1,25 +1,27 @@
 package pl.rationalworks.cryptorecommendationservicetest.controller;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
 import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyFactorsDto;
 import pl.rationalworks.cryptorecommendationservicetest.properties.CryptoProperties;
+import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
 import pl.rationalworks.cryptorecommendationservicetest.service.CryptoCurrencyService;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @RestController
-@RequestMapping("/crypto")
+@RequestMapping("/cryptos")
 @RequiredArgsConstructor
 @Validated
 public class CryptoController {
@@ -27,15 +29,35 @@ public class CryptoController {
     private final CryptoCurrencyService cryptoCurrencyService;
     private final CryptoProperties cryptoProperties;
 
-    @GetMapping("/{symbol}/monthly/{month}/factors")
-    public ResponseEntity<CryptoCurrencyFactorsDto> obtainCryptoMonthlyFactors(
-        @PathVariable("symbol") @NotBlank @Pattern(regexp = "[A-Z]{3}") String symbol,
-        @PathVariable("month") @NotBlank @Pattern(regexp = "\\d{4}-\\d{2}") String month) {
+    @GetMapping(value = {"/ranking", "/ranking/{date}", "/ranking/{date}/{period}"})
+    public ResponseEntity<List<String>> cryptoRanking(@PathVariable("date")
+                                                      @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
+                                                      @PathVariable("period") Optional<FactorPeriod> period) {
+        LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
+        List<String> rankingList = cryptoCurrencyService.cryptoRanking(referenceDate, period.orElse(FactorPeriod.DAY));
+        return ResponseEntity.ok(rankingList);
+    }
+
+    @GetMapping(value = {"/{symbol}/factors", "/{symbol}/factors/{date}", "/{symbol}/factors/{date}/{period}"})
+    public ResponseEntity<CryptoCurrencyFactorsDto> obtainCryptoPriceFactors(
+        @PathVariable("symbol")
+        @Pattern(regexp = "[A-Z]{3,6}", message = "Cryptocurrency symbol must match '[A-Z]{3,6}'") String symbol,
+        @PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
+        @PathVariable("period") Optional<FactorPeriod> period) {
         if (!cryptoProperties.getSupportedCurrencies().contains(symbol)) {
             return ResponseEntity.badRequest().build();
         }
-        LocalDate localDate = LocalDate.parse(month, DateTimeFormatter.ofPattern("yyyy-MM"));
-//        cryptoCurrencyService.fetchOldestAndNewsetPrices(symbol, month);
-        return ResponseEntity.ok().build();
+        LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
+        CryptoRecentPriceFactors factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
+            period.orElse(FactorPeriod.DAY));
+        CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(factors.symbol(), factors.referenceDate(),
+            factors.minPrice(), factors.maxPrice(), factors.oldestPrice(), factors.newestPrice(), factors.period());
+        return ResponseEntity.ok(dto);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ResponseEntity<?> handleConstraintViolationException(ConstraintViolationException e) {
+        return new ResponseEntity<>("Validation Error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }

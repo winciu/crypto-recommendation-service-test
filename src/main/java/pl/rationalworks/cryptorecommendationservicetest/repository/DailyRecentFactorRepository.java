@@ -10,6 +10,9 @@ import pl.rationalworks.cryptorecommendationservicetest.model.DailyRecentFactorI
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyRecentFactors, DailyRecentFactorId> {
@@ -60,4 +63,18 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
         """)
     void updateMonthlyNormalizedFactor(@Param("id") DailyRecentFactorId id,
                                        @Param("factor") BigDecimal monthlyNormalizedFactor);
+
+    @Query(value = """
+        SELECT f.id.symbol
+        FROM CryptoDailyRecentFactors f
+        where f.id.referenceDate = :date
+        order by f.dailyNormalizedFactor desc
+        """)
+    List<String> obtainDailyCryptoRanking(@Param("date") LocalDate date);
+
+    @Query(value = """
+        select f
+        from CryptoDailyRecentFactors f
+        """)
+    CryptoRecentPriceFactors evaluateWeeklyPriceFactors(DailyRecentFactorId dailyRecentFactorId);
 }

@@ -1,5 +1,7 @@
 package pl.rationalworks.cryptorecommendationservicetest.service;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.rationalworks.cryptorecommendationservicetest.data.CsvDataRecord;
 import pl.rationalworks.cryptorecommendationservicetest.model.*;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
+import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
 
 import java.time.LocalDate;
@@ -15,6 +18,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -121,5 +125,24 @@ public class CryptoCurrencyService {
         return StreamSupport
             .stream(factorsById.spliterator(), false)
             .collect(toMap(CryptoDailyRecentFactors::getId, Function.identity()));
+    }
+
+    public List<String> cryptoRanking(LocalDate date, FactorPeriod period) {
+        return dailyRecentFactorRepository.obtainDailyCryptoRanking(date);
+    }
+
+    public CryptoRecentPriceFactors getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
+                                                          LocalDate date, FactorPeriod period) {
+        return switch (period) {
+            case DAY -> {
+                Optional<CryptoDailyRecentFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
+                yield dailyFactors
+                    .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(), df.getId().getReferenceDate(),
+                        df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getNewestPrice(), FactorPeriod.DAY))
+                    .orElse(CryptoRecentPriceFactors.empty(symbol, date, period));
+            }
+            case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(new DailyRecentFactorId(symbol, date));
+            default -> CryptoRecentPriceFactors.empty(symbol, date, period);
+        };
     }
 }
