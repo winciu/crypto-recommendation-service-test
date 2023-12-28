@@ -2,20 +2,23 @@ package pl.rationalworks.cryptorecommendationservicetest.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRecord;
+import pl.rationalworks.cryptorecommendationservicetest.repository.DailyEvaluationRecord;
 import pl.rationalworks.cryptorecommendationservicetest.repository.NormalizedFactor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @NamedNativeQueries({
-    @NamedNativeQuery(name = "selectMinMaxPricesByDayGroupBySymbol",
+    @NamedNativeQuery(name = "evaluateDailyFactorsGroupBySymbol",
         query = """
-            select min(price) as minPrice, max(price) as maxPrice, symbol
+            select symbol,
+                   min(price) as min_price,
+                   max(price) as max_price,
+                   (max(price) - min(price)) / min(price) as normalized_factor
             from crypto_currencies
-            where date = :date 
+            where date = :date
             group by symbol""",
-        resultSetMapping = "minMaxValuesGroupBySymbolMapping"),
+        resultSetMapping = "dailyEvaluationFactorsMapping"),
     @NamedNativeQuery(name = "selectDailyOldestPrice",
         query = """
             WITH OLDEST(oldest_date, symbol) AS
@@ -52,7 +55,7 @@ import java.time.LocalDate;
                       where DATEDIFF(DAY, :date, date) > :daysBack
                         AND DATEDIFF(DAY, :date, date) <= 0
                       group by symbol, date)
-            select (sum(AGG.max_price) - sum(AGG.min_price)) / sum(AGG.min_price) as normalized_factor, symbol
+            select symbol, (sum(AGG.max_price) - sum(AGG.min_price)) / sum(AGG.min_price) as normalized_factor
             from AGG
             group by symbol;
             """,
@@ -60,15 +63,16 @@ import java.time.LocalDate;
 })
 @SqlResultSetMappings({
     @SqlResultSetMapping(
-        name = "minMaxValuesGroupBySymbolMapping",
+        name = "dailyEvaluationFactorsMapping",
         classes = {
             @ConstructorResult(
                 columns = {
-                    @ColumnResult(name = "minPrice", type = BigDecimal.class),
-                    @ColumnResult(name = "maxPrice", type = BigDecimal.class),
-                    @ColumnResult(name = "symbol", type = String.class)
+                    @ColumnResult(name = "symbol", type = String.class),
+                    @ColumnResult(name = "min_price", type = BigDecimal.class),
+                    @ColumnResult(name = "max_price", type = BigDecimal.class),
+                    @ColumnResult(name = "normalized_factor", type = BigDecimal.class)
                 },
-                targetClass = DailyMinMaxRecord.class
+                targetClass = DailyEvaluationRecord.class
             )
         }
     ),
@@ -77,8 +81,8 @@ import java.time.LocalDate;
         classes = {
             @ConstructorResult(
                 columns = {
-                    @ColumnResult(name = "normalized_factor", type = BigDecimal.class),
-                    @ColumnResult(name = "symbol", type = String.class)
+                    @ColumnResult(name = "symbol", type = String.class),
+                    @ColumnResult(name = "normalized_factor", type = BigDecimal.class)
                 },
                 targetClass = NormalizedFactor.class
             )

@@ -11,9 +11,8 @@ import pl.rationalworks.cryptorecommendationservicetest.model.CryptoCurrencyId;
 import pl.rationalworks.cryptorecommendationservicetest.model.CryptoDailyRecentFactors;
 import pl.rationalworks.cryptorecommendationservicetest.model.DailyRecentFactorId;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
-import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRecord;
+import pl.rationalworks.cryptorecommendationservicetest.repository.DailyEvaluationRecord;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
-import pl.rationalworks.cryptorecommendationservicetest.repository.NormalizedFactor;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -114,12 +113,13 @@ public class CryptoCurrencyService {
     }
 
     private Map<DailyRecentFactorId, CryptoDailyRecentFactors> fetchMinMaxPricesForGivenDay(LocalDate date) {
-        List<DailyMinMaxRecord> records = cryptoCurrencyRepository.fetchMinMaxPricesForGivenDay(date);
+        List<DailyEvaluationRecord> records = cryptoCurrencyRepository.evaluateDailyFactors(date);
         log.info("fetched {} new daily factors", records.size());
         return records.stream()
             .map(record -> {
                 DailyRecentFactorId factorId = new DailyRecentFactorId(record.symbol(), date);
-                return CryptoDailyRecentFactors.setupMinMaxPriceFactors(factorId, record.minPrice(), record.maxPrice());
+                return CryptoDailyRecentFactors.setupDailyEvaluationFactors(factorId, record.minPrice(),
+                    record.maxPrice(), record.normalizedFactor());
             })
             .collect(toMap(CryptoDailyRecentFactors::getId, Function.identity()));
     }

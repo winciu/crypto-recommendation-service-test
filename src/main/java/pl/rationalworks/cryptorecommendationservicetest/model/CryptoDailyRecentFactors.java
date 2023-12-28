@@ -43,6 +43,9 @@ public class CryptoDailyRecentFactors {
     private BigDecimal newestPrice;
     @Column(name = "newest_price_date")
     private Instant newestPriceDate;
+
+    @Column(name = "daily_normalized_factor", precision = 16, scale = 5)
+    private BigDecimal dailyNormalizedFactor;
     /**
      * This property stores a normalized weekly factor for a given currency. Here 'weekly' means a week period to date.
      * That means that this factor is calculated using a data from a 7 days back up to now (that is, the current date which is an
@@ -58,26 +61,27 @@ public class CryptoDailyRecentFactors {
     @Column(name = "month_normalized_factor", precision = 16, scale = 5)
     private BigDecimal monthNormalizedFactor;
 
-    public static CryptoDailyRecentFactors setupMinMaxPriceFactors(DailyRecentFactorId id, BigDecimal minPrice,
-                                                                   BigDecimal maxPrice) {
+    public static CryptoDailyRecentFactors setupDailyEvaluationFactors(DailyRecentFactorId id, BigDecimal minPrice,
+                                                                       BigDecimal maxPrice,
+                                                                       BigDecimal normalizedFactor) {
         return new CryptoDailyRecentFactors(id, minPrice, maxPrice, null, null,
-            null, null, null, null);
+            null, null, normalizedFactor, null, null);
     }
 
     public static CryptoDailyRecentFactors setupOldestPriceFactors(DailyRecentFactorId id,
                                                                    BigDecimal oldestPrice, Instant oldestPriceDate) {
         return new CryptoDailyRecentFactors(id, null, null, oldestPrice, oldestPriceDate, null,
-            null, null, null);
+            null, null, null, null);
     }
 
     public static CryptoDailyRecentFactors setupNewestPriceFactors(DailyRecentFactorId id,
                                                                    BigDecimal newestPrice, Instant newestPriceDate) {
         return new CryptoDailyRecentFactors(id, null, null, null, null,
-            newestPrice, newestPriceDate, null, null);
+            newestPrice, newestPriceDate, null, null, null);
     }
 
     public static CryptoDailyRecentFactors setupNormalizedWeeklyFactors(DailyRecentFactorId id, BigDecimal factorValue) {
         return new CryptoDailyRecentFactors(id, null,null,null,null,
-            null,null,factorValue,null);
+            null, null, null, factorValue, null);
     }
 }
