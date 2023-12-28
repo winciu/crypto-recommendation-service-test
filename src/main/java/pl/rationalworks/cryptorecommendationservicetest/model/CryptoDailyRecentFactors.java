@@ -25,21 +25,21 @@ public class CryptoDailyRecentFactors {
 
     @EmbeddedId
     private DailyRecentFactorId id;
-    @Column(name = "min_price")
+    @Column(name = "min_price", precision = 16, scale = 5)
     private BigDecimal minPrice;
-    @Column(name = "max_price")
+    @Column(name = "max_price", precision = 16, scale = 5)
     private BigDecimal maxPrice;
     /**
      * This field stores the oldest currency price we have since the beginning of the current day (id.referenceDate)
      */
-    @Column(name = "oldest_price")
+    @Column(name = "oldest_price", precision = 16, scale = 5)
     private BigDecimal oldestPrice;
     @Column(name = "oldest_price_date")
     private Instant oldestPriceDate;
     /**
      * This field stores the newest currency price we have for the current day (id.referenceDate)
      */
-    @Column(name = "newest_price")
+    @Column(name = "newest_price", precision = 16, scale = 5)
     private BigDecimal newestPrice;
     @Column(name = "newest_price_date")
     private Instant newestPriceDate;
@@ -48,14 +48,14 @@ public class CryptoDailyRecentFactors {
      * That means that this factor is calculated using a data from a 7 days back up to now (that is, the current date which is an
      * id.referenceDate).
      */
-    @Column(name = "week_normalized_factor")
+    @Column(name = "week_normalized_factor", precision = 16, scale = 5)
     private BigDecimal weekNormalizedFactor;
     /**
      * This property stores a normalized monthly factor for a given currency. Here 'monthly' means a month period to date.
      * That means that this factor is calculated using a data from a 31 days back up to now (that is, the current date which is an
      * id.referenceDate).
      */
-    @Column(name = "month_normalized_factor")
+    @Column(name = "month_normalized_factor", precision = 16, scale = 5)
     private BigDecimal monthNormalizedFactor;
 
     public static CryptoDailyRecentFactors setupMinMaxPriceFactors(DailyRecentFactorId id, BigDecimal minPrice,

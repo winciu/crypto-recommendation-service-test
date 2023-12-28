@@ -75,7 +75,7 @@ public class CryptoCurrency {
     @Column(name = "date", nullable = false, updatable = false)
     private LocalDate date;
 
-    @Column(name = "price", nullable = false, precision = 14, scale = 5)
+    @Column(name = "price", nullable = false, precision = 16, scale = 5)
     private BigDecimal price;
 
 }
