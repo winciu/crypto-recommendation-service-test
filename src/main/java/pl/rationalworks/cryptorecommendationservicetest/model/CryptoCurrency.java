@@ -3,6 +3,7 @@ package pl.rationalworks.cryptorecommendationservicetest.model;
 import jakarta.persistence.*;
 import lombok.*;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRecord;
+import pl.rationalworks.cryptorecommendationservicetest.repository.NormalizedFactor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,9 +43,22 @@ import java.time.LocalDate;
             where cc.timestamp = n.newest_date
               AND cc.symbol = n.symbol;
             """,
-        resultClass = CryptoCurrency.class)
+        resultClass = CryptoCurrency.class),
+    @NamedNativeQuery(name = "selectNormalizedFactorsGroupBySymbol",
+        query = """
+            WITH AGG(min_price, max_price, symbol, date) AS
+                     (select min(price) as min_price, max(price) as max_price, symbol, date
+                      from crypto_currencies
+                      where DATEDIFF(DAY, :date, date) > :daysBack
+                        AND DATEDIFF(DAY, :date, date) <= 0
+                      group by symbol, date)
+            select (sum(AGG.max_price) - sum(AGG.min_price)) / sum(AGG.min_price) as normalized_factor, symbol
+            from AGG
+            group by symbol;
+            """,
+        resultSetMapping = "normalizedFactorMapping")
 })
-@SqlResultSetMappings(
+@SqlResultSetMappings({
     @SqlResultSetMapping(
         name = "minMaxValuesGroupBySymbolMapping",
         classes = {
@@ -57,8 +71,20 @@ import java.time.LocalDate;
                 targetClass = DailyMinMaxRecord.class
             )
         }
+    ),
+    @SqlResultSetMapping(
+        name = "normalizedFactorMapping",
+        classes = {
+            @ConstructorResult(
+                columns = {
+                    @ColumnResult(name = "normalized_factor", type = BigDecimal.class),
+                    @ColumnResult(name = "symbol", type = String.class)
+                },
+                targetClass = NormalizedFactor.class
+            )
+        }
     )
-)
+})
 @Entity
 @Table(name = "crypto_currencies")
 @EqualsAndHashCode

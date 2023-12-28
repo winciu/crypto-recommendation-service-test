@@ -13,6 +13,7 @@ import pl.rationalworks.cryptorecommendationservicetest.model.DailyRecentFactorI
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyMinMaxRecord;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
+import pl.rationalworks.cryptorecommendationservicetest.repository.NormalizedFactor;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -33,11 +34,6 @@ public class CryptoCurrencyService {
 
     private final CryptoCurrencyRepository cryptoCurrencyRepository;
     private final DailyRecentFactorRepository dailyRecentFactorRepository;
-
-    private static Map<DailyRecentFactorId, CryptoCurrency> attachFactorIds(List<CryptoCurrency> cryptoCurrencies) {
-        return cryptoCurrencies.stream()
-            .collect(toMap(cc -> new DailyRecentFactorId(cc.getId().getSymbol(), cc.getDate()), Function.identity()));
-    }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void saveCryptos(List<CsvDataRecord> dataRecords) {
@@ -70,24 +66,35 @@ public class CryptoCurrencyService {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void updateDailyOldestPriceFactors(LocalDate date) {
-        List<CryptoCurrency> dailyOldestCryptos = cryptoCurrencyRepository.fetchDailyOldestPrice(date);
-        updateDailyOldestNewestPriceFactors(dailyOldestCryptos,
+        updateRecentFactors(cryptoCurrencyRepository.fetchDailyOldestPrice(date),
+            cc -> new DailyRecentFactorId(cc.getId().getSymbol(), cc.getDate()),
             (fid, cc) -> CryptoDailyRecentFactors.setupOldestPriceFactors(fid, cc.getPrice(), cc.getId().getTimestamp()),
             f -> dailyRecentFactorRepository.updateOldestPriceFactors(f.getId(), f.getOldestPrice(), f.getOldestPriceDate()));
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void updateDailyNewestPriceFactors(LocalDate date) {
-        List<CryptoCurrency> dailyNewestCryptos = cryptoCurrencyRepository.fetchDailyNewestPrice(date);
-        updateDailyOldestNewestPriceFactors(dailyNewestCryptos,
+        updateRecentFactors(cryptoCurrencyRepository.fetchDailyNewestPrice(date),
+            cc -> new DailyRecentFactorId(cc.getId().getSymbol(), cc.getDate()),
             (fid, cc) -> CryptoDailyRecentFactors.setupNewestPriceFactors(fid, cc.getPrice(), cc.getId().getTimestamp()),
             f -> dailyRecentFactorRepository.updateNewestPriceFactors(f.getId(), f.getNewestPrice(), f.getNewestPriceDate()));
     }
 
-    private void updateDailyOldestNewestPriceFactors(List<CryptoCurrency> cryptoCurrencies,
-                                                     BiFunction<DailyRecentFactorId, CryptoCurrency, CryptoDailyRecentFactors> cryptoFactorSupplier,
-                                                     Consumer<CryptoDailyRecentFactors> updateMethodSupplier) {
-        Map<DailyRecentFactorId, CryptoCurrency> cryptosWithFactorIds = attachFactorIds(cryptoCurrencies);
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public void evaluateNormalizedFactors(LocalDate date, int daysBack) {
+        updateRecentFactors(cryptoCurrencyRepository.fetchNormalizedFactors(date, daysBack),
+            nf -> new DailyRecentFactorId(nf.symbol(), date),
+            (fid, nf) -> CryptoDailyRecentFactors.setupNormalizedWeeklyFactors(fid, nf.factorValue()),
+            f -> dailyRecentFactorRepository.updateWeeklyNormalizedFactor(f.getId(), f.getWeekNormalizedFactor()));
+    }
+
+    private <IN> void updateRecentFactors(List<IN> cryptoCurrencies,
+                                          Function<IN, DailyRecentFactorId> factorIdKeyMapperFunction,
+                                          BiFunction<DailyRecentFactorId, IN, CryptoDailyRecentFactors> cryptoFactorSupplier,
+                                          Consumer<CryptoDailyRecentFactors> updateMethodSupplier) {
+        //attach factor ids
+        Map<DailyRecentFactorId, IN> cryptosWithFactorIds = cryptoCurrencies.stream()
+            .collect(toMap(factorIdKeyMapperFunction, Function.identity()));
         // fetch existing factors
         Map<DailyRecentFactorId, CryptoDailyRecentFactors> existingFactors = fetchExistingFactors(cryptosWithFactorIds.keySet());
 

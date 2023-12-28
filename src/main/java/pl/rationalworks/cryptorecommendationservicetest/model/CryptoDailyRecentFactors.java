@@ -75,4 +75,9 @@ public class CryptoDailyRecentFactors {
         return new CryptoDailyRecentFactors(id, null, null, null, null,
             newestPrice, newestPriceDate, null, null);
     }
+
+    public static CryptoDailyRecentFactors setupNormalizedWeeklyFactors(DailyRecentFactorId id, BigDecimal factorValue) {
+        return new CryptoDailyRecentFactors(id, null,null,null,null,
+            null,null,factorValue,null);
+    }
 }

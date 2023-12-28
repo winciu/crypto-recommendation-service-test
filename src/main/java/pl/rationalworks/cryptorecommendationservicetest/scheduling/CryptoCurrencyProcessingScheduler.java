@@ -38,6 +38,13 @@ public class CryptoCurrencyProcessingScheduler {
         updateMinMaxFactors(date);
         updateDailyOldestPriceFactors(date);
         updateDailyNewestPriceFactors(date);
+        evaluateWeeklyCryptosNormalizedRange(date);
+    }
+
+    private void evaluateWeeklyCryptosNormalizedRange(LocalDate date) {
+        log.info("Scheduled task EVALUATE_NORMALIZED_WEEKLY_FACTORS for {} started ...", date);
+        service.evaluateNormalizedFactors(date, -7);
+        log.info("Scheduled task EVALUATE_NORMALIZED_WEEKLY_FACTORS for {} finished.", date);
     }
 
     /**

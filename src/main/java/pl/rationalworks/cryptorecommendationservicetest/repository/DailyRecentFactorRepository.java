@@ -42,4 +42,13 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
     void updateNewestPriceFactors(@Param("id") DailyRecentFactorId id,
                                   @Param("newestPrice") BigDecimal newestPrice,
                                   @Param("newestPriceDate") Instant newestPriceDate);
+
+    @Modifying
+    @Query(value = """
+        UPDATE CryptoDailyRecentFactors f
+        SET f.weekNormalizedFactor = :weeklyFactor
+        WHERE f.id = :id
+        """)
+    void updateWeeklyNormalizedFactor(@Param("id") DailyRecentFactorId id,
+                                      @Param("weeklyFactor") BigDecimal weekNormalizedFactor);
 }
