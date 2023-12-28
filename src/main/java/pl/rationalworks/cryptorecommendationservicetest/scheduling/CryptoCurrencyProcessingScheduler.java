@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
 import pl.rationalworks.cryptorecommendationservicetest.properties.SchedulingProperties;
 import pl.rationalworks.cryptorecommendationservicetest.service.CryptoCurrencyService;
 
@@ -39,12 +40,19 @@ public class CryptoCurrencyProcessingScheduler {
         updateDailyOldestPriceFactors(date);
         updateDailyNewestPriceFactors(date);
         evaluateWeeklyCryptosNormalizedRange(date);
+        evaluateMonthlyCryptosNormalizedRange(date);
     }
 
     private void evaluateWeeklyCryptosNormalizedRange(LocalDate date) {
         log.info("Scheduled task EVALUATE_NORMALIZED_WEEKLY_FACTORS for {} started ...", date);
-        service.evaluateNormalizedFactors(date, -7);
+        service.evaluateNormalizedFactors(date, FactorPeriod.WEEK);
         log.info("Scheduled task EVALUATE_NORMALIZED_WEEKLY_FACTORS for {} finished.", date);
+    }
+
+    private void evaluateMonthlyCryptosNormalizedRange(LocalDate date) {
+        log.info("Scheduled task EVALUATE_NORMALIZED_MONTHLY_FACTORS for {} started ...", date);
+        service.evaluateNormalizedFactors(date, FactorPeriod.MONTH);
+        log.info("Scheduled task EVALUATE_NORMALIZED_MONTHLY_FACTORS for {} finished.", date);
     }
 
     /**

@@ -84,4 +84,9 @@ public class CryptoDailyRecentFactors {
         return new CryptoDailyRecentFactors(id, null,null,null,null,
             null, null, null, factorValue, null);
     }
+
+    public static CryptoDailyRecentFactors setupNormalizedMonthlyFactors(DailyRecentFactorId id, BigDecimal factorValue) {
+        return new CryptoDailyRecentFactors(id, null, null, null, null,
+            null, null, null, null, factorValue);
+    }
 }

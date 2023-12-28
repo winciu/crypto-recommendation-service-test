@@ -6,12 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.rationalworks.cryptorecommendationservicetest.data.CsvDataRecord;
-import pl.rationalworks.cryptorecommendationservicetest.model.CryptoCurrency;
-import pl.rationalworks.cryptorecommendationservicetest.model.CryptoCurrencyId;
-import pl.rationalworks.cryptorecommendationservicetest.model.CryptoDailyRecentFactors;
-import pl.rationalworks.cryptorecommendationservicetest.model.DailyRecentFactorId;
+import pl.rationalworks.cryptorecommendationservicetest.model.*;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
-import pl.rationalworks.cryptorecommendationservicetest.repository.DailyEvaluationRecord;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
 
 import java.time.LocalDate;
@@ -25,6 +21,7 @@ import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.toMap;
+import static pl.rationalworks.cryptorecommendationservicetest.model.CryptoDailyRecentFactors.setupDailyEvaluationFactors;
 
 @Service
 @Slf4j
@@ -47,20 +44,11 @@ public class CryptoCurrencyService {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void updateMinMaxFactorValuesForGivenDay(LocalDate date) {
-        Map<DailyRecentFactorId, CryptoDailyRecentFactors> newDailyRecentFactors = fetchMinMaxPricesForGivenDay(date);
-        Map<DailyRecentFactorId, CryptoDailyRecentFactors> existingFactors = fetchExistingFactors(newDailyRecentFactors.keySet());
-
-        List<CryptoDailyRecentFactors> newFactors = new ArrayList<>();
-        List<CryptoDailyRecentFactors> toBeUpdatedFactors = new ArrayList<>();
-        newDailyRecentFactors.forEach((fid, newFactor) -> {
-            if (existingFactors.containsKey(fid)) { // it's an update
-                toBeUpdatedFactors.add(newFactor);
-            } else { // it's an insert
-                newFactors.add(newFactor);
-            }
-        });
-        toBeUpdatedFactors.forEach(f -> dailyRecentFactorRepository.updateMinMaxFactorsByDate(f.getId(), f.getMinPrice(), f.getMaxPrice()));
-        dailyRecentFactorRepository.saveAll(newFactors);
+        updateRecentFactors(cryptoCurrencyRepository.evaluateDailyFactors(date),
+            record -> new DailyRecentFactorId(record.symbol(), date),
+            (fid, r) -> setupDailyEvaluationFactors(fid, r.minPrice(), r.maxPrice(), r.normalizedFactor()),
+            f -> dailyRecentFactorRepository.updateMinMaxFactorsByDate(f.getId(), f.getMinPrice(), f.getMaxPrice())
+        );
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -80,11 +68,27 @@ public class CryptoCurrencyService {
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void evaluateNormalizedFactors(LocalDate date, int daysBack) {
-        updateRecentFactors(cryptoCurrencyRepository.fetchNormalizedFactors(date, daysBack),
+    public void evaluateNormalizedFactors(LocalDate date, FactorPeriod period) {
+        updateRecentFactors(cryptoCurrencyRepository.fetchNormalizedFactors(date, period.getDaysBack()),
             nf -> new DailyRecentFactorId(nf.symbol(), date),
-            (fid, nf) -> CryptoDailyRecentFactors.setupNormalizedWeeklyFactors(fid, nf.factorValue()),
-            f -> dailyRecentFactorRepository.updateWeeklyNormalizedFactor(f.getId(), f.getWeekNormalizedFactor()));
+            (fid, nf) -> {
+                if (FactorPeriod.WEEK.equals(period)) {
+                    return CryptoDailyRecentFactors.setupNormalizedWeeklyFactors(fid, nf.factorValue());
+                }
+                if (FactorPeriod.MONTH.equals(period)) {
+                    return CryptoDailyRecentFactors.setupNormalizedMonthlyFactors(fid, nf.factorValue());
+                }
+                return new CryptoDailyRecentFactors(); // an empty factor (be default, just in case)
+            },
+            f -> {
+                if (FactorPeriod.WEEK.equals(period)) {
+                    dailyRecentFactorRepository.updateWeeklyNormalizedFactor(f.getId(), f.getWeekNormalizedFactor());
+                }
+                if (FactorPeriod.MONTH.equals(period)) {
+                    dailyRecentFactorRepository.updateMonthlyNormalizedFactor(f.getId(), f.getMonthNormalizedFactor());
+                }
+            }
+        );
     }
 
     private <IN> void updateRecentFactors(List<IN> cryptoCurrencies,
@@ -101,27 +105,15 @@ public class CryptoCurrencyService {
         List<CryptoDailyRecentFactors> toBeUpdatedFactors = new ArrayList<>();
 
         cryptosWithFactorIds.forEach((fid, cc) -> {
-            CryptoDailyRecentFactors oldestPriceFactor = cryptoFactorSupplier.apply(fid, cc);
+            CryptoDailyRecentFactors factors = cryptoFactorSupplier.apply(fid, cc);
             if (existingFactors.containsKey(fid)) { // it's an update
-                toBeUpdatedFactors.add(oldestPriceFactor);
+                toBeUpdatedFactors.add(factors);
             } else { // it's an insert
-                newFactors.add(oldestPriceFactor);
+                newFactors.add(factors);
             }
         });
         toBeUpdatedFactors.forEach(updateMethodSupplier);
         dailyRecentFactorRepository.saveAll(newFactors);
-    }
-
-    private Map<DailyRecentFactorId, CryptoDailyRecentFactors> fetchMinMaxPricesForGivenDay(LocalDate date) {
-        List<DailyEvaluationRecord> records = cryptoCurrencyRepository.evaluateDailyFactors(date);
-        log.info("fetched {} new daily factors", records.size());
-        return records.stream()
-            .map(record -> {
-                DailyRecentFactorId factorId = new DailyRecentFactorId(record.symbol(), date);
-                return CryptoDailyRecentFactors.setupDailyEvaluationFactors(factorId, record.minPrice(),
-                    record.maxPrice(), record.normalizedFactor());
-            })
-            .collect(toMap(CryptoDailyRecentFactors::getId, Function.identity()));
     }
 
     private Map<DailyRecentFactorId, CryptoDailyRecentFactors> fetchExistingFactors(Iterable<DailyRecentFactorId> factorIds) {

@@ -27,9 +27,8 @@ public interface CryptoCurrencyRepository extends CrudRepository<CryptoCurrency,
     List<CryptoCurrency> fetchDailyNewestPrice(@Param("date") LocalDate date);
 
     /**
-     * @param date     a data from which to start aggregating data for evaluating normalized factor (inclusive)
-     * @param daysBack Number of days back to calculate normalized factor. Must be a negative number. <br/>
-     *                 For instance: WEEK = -7, MONTH = -30
+     * @param date   a data from which to start aggregating data for evaluating normalized factor (inclusive)
+     * @param daysBack Number of days back to calculate normalized factor.
      * @return list of {@link NormalizedFactor} instance for each cryptocurrency symbol
      */
     @Query(name = "selectNormalizedFactorsGroupBySymbol", nativeQuery = true)
