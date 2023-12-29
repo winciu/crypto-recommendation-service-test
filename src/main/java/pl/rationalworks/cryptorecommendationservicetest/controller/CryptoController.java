@@ -48,10 +48,12 @@ public class CryptoController {
             return ResponseEntity.badRequest().build();
         }
         LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
+        FactorPeriod factorPeriod = period.orElse(FactorPeriod.DAY);
         CryptoRecentPriceFactors factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
-            period.orElse(FactorPeriod.DAY));
-        CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(factors.symbol(), factors.referenceDate(),
-            factors.minPrice(), factors.maxPrice(), factors.oldestPrice(), factors.newestPrice(), factors.period());
+            factorPeriod);
+        CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(factors.symbol(), referenceDate,
+            factors.minPrice(), factors.maxPrice(), factors.oldestPrice(), factors.oldestPriceDate(),
+            factors.newestPrice(), factors.newestPriceDate(), factorPeriod);
         return ResponseEntity.ok(dto);
     }
 

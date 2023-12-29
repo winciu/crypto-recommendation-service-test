@@ -1,13 +1,11 @@
 package pl.rationalworks.cryptorecommendationservicetest.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,6 +13,40 @@ import java.time.Instant;
 /**
  *
  */
+@NamedNativeQueries({
+    @NamedNativeQuery(name = "evaluateAggregatedPriceFactors",
+        //TODO: this needs to be fixed to return oldest_price and newest_price but H2 does not support nested WITH
+        // see https://github.com/h2database/h2database/issues/821 for details. Probably a new DB should be used instead
+        query = """
+            select symbol,
+                   min(min_price) as min_price,
+                   max(max_price) as max_price,
+                   min(oldest_price_date) as oldest_price_date,
+                   max(newest_price_date) as newest_price_date
+            from daily_recent_factors
+            where DATEDIFF(DAY, :date, reference_date) > :daysBack
+              AND DATEDIFF(DAY, :date, reference_date) <= 0
+              AND symbol = :symbol
+            """,
+        resultSetMapping = "aggregatedPriceFactorsMapping")
+})
+@SqlResultSetMappings({
+    @SqlResultSetMapping(
+        name = "aggregatedPriceFactorsMapping",
+        classes = {
+            @ConstructorResult(
+                columns = {
+                    @ColumnResult(name = "symbol", type = String.class),
+                    @ColumnResult(name = "min_price", type = BigDecimal.class),
+                    @ColumnResult(name = "max_price", type = BigDecimal.class),
+                    @ColumnResult(name = "oldest_price_date", type = Instant.class),
+                    @ColumnResult(name = "newest_price_date", type = Instant.class)
+                },
+                targetClass = CryptoRecentPriceFactors.class
+            )
+        }
+    )
+})
 @Entity
 @Table(name = "daily_recent_factors")
 @NoArgsConstructor

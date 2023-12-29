@@ -72,9 +72,8 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
         """)
     List<String> obtainDailyCryptoRanking(@Param("date") LocalDate date);
 
-    @Query(value = """
-        select f
-        from CryptoDailyRecentFactors f
-        """)
-    CryptoRecentPriceFactors evaluateWeeklyPriceFactors(DailyRecentFactorId dailyRecentFactorId);
+    @Query(name = "evaluateAggregatedPriceFactors")
+    CryptoRecentPriceFactors evaluateWeeklyPriceFactors(@Param("symbol") String symbol,
+                                                        @Param("date") LocalDate date,
+                                                        @Param("daysBack") int daysBack);
 }

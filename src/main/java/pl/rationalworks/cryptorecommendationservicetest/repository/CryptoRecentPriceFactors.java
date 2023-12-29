@@ -1,13 +1,13 @@
 package pl.rationalworks.cryptorecommendationservicetest.repository;
 
-import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
-
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.Instant;
 
-public record CryptoRecentPriceFactors(String symbol, LocalDate referenceDate, BigDecimal minPrice, BigDecimal maxPrice,
-                                       BigDecimal oldestPrice, BigDecimal newestPrice, FactorPeriod period) {
-    public static CryptoRecentPriceFactors empty(String symbol, LocalDate referenceDate, FactorPeriod period) {
-        return new CryptoRecentPriceFactors(symbol, referenceDate, null, null, null, null, period);
+public record CryptoRecentPriceFactors(String symbol, BigDecimal minPrice, BigDecimal maxPrice,
+                                       BigDecimal oldestPrice, Instant oldestPriceDate,
+                                       BigDecimal newestPrice, Instant newestPriceDate) {
+    public static CryptoRecentPriceFactors empty(String symbol) {
+        return new CryptoRecentPriceFactors(symbol, null, null, null, null,
+            null, null);
     }
 }

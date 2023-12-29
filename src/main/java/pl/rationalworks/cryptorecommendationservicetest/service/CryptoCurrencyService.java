@@ -137,12 +137,13 @@ public class CryptoCurrencyService {
             case DAY -> {
                 Optional<CryptoDailyRecentFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
                 yield dailyFactors
-                    .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(), df.getId().getReferenceDate(),
-                        df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getNewestPrice(), FactorPeriod.DAY))
-                    .orElse(CryptoRecentPriceFactors.empty(symbol, date, period));
+                    .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(),
+                        df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getOldestPriceDate(),
+                        df.getNewestPrice(), df.getNewestPriceDate()))
+                    .orElse(CryptoRecentPriceFactors.empty(symbol));
             }
-            case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(new DailyRecentFactorId(symbol, date));
-            default -> CryptoRecentPriceFactors.empty(symbol, date, period);
+            case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(symbol, date, period.getDaysBack());
+            default -> CryptoRecentPriceFactors.empty(symbol);
         };
     }
 }
