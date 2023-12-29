@@ -47,7 +47,6 @@ service:
       - 2022-01-29
       - 2022-01-30
       - 2022-01-31
-
 spring:
   datasource:
     url: jdbc:h2:mem:cryptos
@@ -64,9 +63,11 @@ spring:
           batch_versioned_data: true
         order_inserts: true
         order_updates: true
-        generate_statistics: true
+        generate_statistics: false
         format_sql: true
-    show-sql: true
+        hbm2ddl:
+          auto: update
+    show-sql: false
   h2:
     console:
       enabled: true
