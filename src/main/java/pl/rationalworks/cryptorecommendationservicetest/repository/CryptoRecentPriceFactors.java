@@ -6,8 +6,4 @@ import java.time.Instant;
 public record CryptoRecentPriceFactors(String symbol, BigDecimal minPrice, BigDecimal maxPrice,
                                        BigDecimal oldestPrice, Instant oldestPriceDate,
                                        BigDecimal newestPrice, Instant newestPriceDate) {
-    public static CryptoRecentPriceFactors empty(String symbol) {
-        return new CryptoRecentPriceFactors(symbol, null, null, null, null,
-            null, null);
-    }
 }

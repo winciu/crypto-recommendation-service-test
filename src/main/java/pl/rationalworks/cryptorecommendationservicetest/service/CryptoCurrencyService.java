@@ -131,19 +131,22 @@ public class CryptoCurrencyService {
         return dailyRecentFactorRepository.obtainDailyCryptoRanking(date);
     }
 
-    public CryptoRecentPriceFactors getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
+    public Optional<CryptoRecentPriceFactors> getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
                                                           LocalDate date, FactorPeriod period) {
         return switch (period) {
             case DAY -> {
                 Optional<CryptoDailyRecentFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
-                yield dailyFactors
-                    .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(),
-                        df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getOldestPriceDate(),
-                        df.getNewestPrice(), df.getNewestPriceDate()))
-                    .orElse(CryptoRecentPriceFactors.empty(symbol));
+                if (dailyFactors.isPresent()) {
+                    yield dailyFactors
+                        .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(),
+                            df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getOldestPriceDate(),
+                            df.getNewestPrice(), df.getNewestPriceDate()));
+                } else {
+                    yield Optional.empty();
+                }
             }
             case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(symbol, date, period.getDaysBack());
-            default -> CryptoRecentPriceFactors.empty(symbol);
+            default -> Optional.empty();
         };
     }
 }

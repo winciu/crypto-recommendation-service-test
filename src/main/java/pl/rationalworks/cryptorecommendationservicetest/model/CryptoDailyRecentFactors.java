@@ -15,18 +15,32 @@ import java.time.Instant;
  */
 @NamedNativeQueries({
     @NamedNativeQuery(name = "evaluateAggregatedPriceFactors",
-        //TODO: this needs to be fixed to return oldest_price and newest_price but H2 does not support nested WITH
-        // see https://github.com/h2database/h2database/issues/821 for details. Probably a new DB should be used instead
         query = """
-            select symbol,
-                   min(min_price) as min_price,
-                   max(max_price) as max_price,
-                   min(oldest_price_date) as oldest_price_date,
-                   max(newest_price_date) as newest_price_date
-            from daily_recent_factors
-            where DATEDIFF(DAY, :date, reference_date) > :daysBack
-              AND DATEDIFF(DAY, :date, reference_date) <= 0
-              AND symbol = :symbol
+            WITH AGG(min_price, max_price, oldest_price_date, newest_price_date) AS
+                     (select min(min_price)         as min_price,
+                             max(max_price)         as max_price,
+                             min(oldest_price_date) as oldest_price_date,
+                             max(newest_price_date) as newest_price_date
+                      from daily_recent_factors
+                      where DATEDIFF(DAY, :date, reference_date) > :daysBack
+                        AND DATEDIFF(DAY, :date, reference_date) <= 0
+                        and symbol = :symbol),
+                 OLDEST_PRICE(symbol, oldest_price) AS
+                     (select f.symbol, f.oldest_price
+                      from daily_recent_factors f,
+                           AGG
+                      where f.oldest_price_date = AGG.oldest_price_date
+                        and f.symbol = :symbol),
+                 NEWEST_PRICE(symbol, newest_price) AS
+                     (select f.symbol, f.newest_price
+                      from daily_recent_factors f,
+                           AGG
+                      where f.newest_price_date = AGG.newest_price_date
+                        and f.symbol = :symbol)
+            select op.symbol, AGG.*, op.oldest_price, np.newest_price
+            FROM AGG,
+                 OLDEST_PRICE op,
+                 NEWEST_PRICE np
             """,
         resultSetMapping = "aggregatedPriceFactorsMapping")
 })
@@ -39,7 +53,9 @@ import java.time.Instant;
                     @ColumnResult(name = "symbol", type = String.class),
                     @ColumnResult(name = "min_price", type = BigDecimal.class),
                     @ColumnResult(name = "max_price", type = BigDecimal.class),
+                    @ColumnResult(name = "oldest_price", type = BigDecimal.class),
                     @ColumnResult(name = "oldest_price_date", type = Instant.class),
+                    @ColumnResult(name = "newest_price", type = BigDecimal.class),
                     @ColumnResult(name = "newest_price_date", type = Instant.class)
                 },
                 targetClass = CryptoRecentPriceFactors.class

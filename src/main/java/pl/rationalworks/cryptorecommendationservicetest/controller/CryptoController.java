@@ -49,12 +49,16 @@ public class CryptoController {
         }
         LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
         FactorPeriod factorPeriod = period.orElse(FactorPeriod.DAY);
-        CryptoRecentPriceFactors factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
+        Optional<CryptoRecentPriceFactors> factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
             factorPeriod);
-        CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(factors.symbol(), referenceDate,
-            factors.minPrice(), factors.maxPrice(), factors.oldestPrice(), factors.oldestPriceDate(),
-            factors.newestPrice(), factors.newestPriceDate(), factorPeriod);
-        return ResponseEntity.ok(dto);
+        return factors.
+            map(f -> {
+                CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(f.symbol(), referenceDate,
+                    f.minPrice(), f.maxPrice(), f.oldestPrice(), f.oldestPriceDate(),
+                    f.newestPrice(), f.newestPriceDate(), factorPeriod);
+                return ResponseEntity.ok(dto);
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
