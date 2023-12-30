@@ -42,7 +42,24 @@ import java.time.Instant;
                  OLDEST_PRICE op,
                  NEWEST_PRICE np
             """,
-        resultSetMapping = "aggregatedPriceFactorsMapping")
+        resultSetMapping = "aggregatedPriceFactorsMapping"),
+    @NamedNativeQuery(name = "selectCryptosByNormalizedFactorAndPeriod",
+        query = """
+            select f.symbol
+            from daily_recent_factors f
+            where reference_date = :date
+            order by case
+                         when :period = 'DAY' then
+                             daily_normalized_factor
+                         when :period = 'WEEK' then
+                             weekly_normalized_factor
+                         when :period = 'MONTH' then
+                             monthly_normalized_factor
+                         end DESC
+            limit :lmt
+            """,
+        resultClass = String.class
+    )
 })
 @SqlResultSetMappings({
     @SqlResultSetMapping(
@@ -99,15 +116,15 @@ public class CryptoDailyRecentFactors {
      * That means that this factor is calculated using a data from a 7 days back up to now (that is, the current date which is an
      * id.referenceDate).
      */
-    @Column(name = "week_normalized_factor", precision = 16, scale = 5)
-    private BigDecimal weekNormalizedFactor;
+    @Column(name = "weekly_normalized_factor", precision = 16, scale = 5)
+    private BigDecimal weeklyNormalizedFactor;
     /**
      * This property stores a normalized monthly factor for a given currency. Here 'monthly' means a month period to date.
      * That means that this factor is calculated using a data from a 31 days back up to now (that is, the current date which is an
      * id.referenceDate).
      */
-    @Column(name = "month_normalized_factor", precision = 16, scale = 5)
-    private BigDecimal monthNormalizedFactor;
+    @Column(name = "monthly_normalized_factor", precision = 16, scale = 5)
+    private BigDecimal monthlyNormalizedFactor;
 
     public static CryptoDailyRecentFactors setupDailyEvaluationFactors(DailyRecentFactorId id, BigDecimal minPrice,
                                                                        BigDecimal maxPrice,

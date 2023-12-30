@@ -22,14 +22,14 @@ public class CryptoCurrencyProcessingScheduler {
     private final SchedulingProperties schedulingProperties;
 
     /**
-     * By default, scheduler should process all entries from the day before (yesterday).
+     * By default, scheduler should process all entries starting from the current day (today).
      * However, due to the fact that the input data has totally different dates we need to add some logic
      * for processing those 'additional'/'not up-to-date' entries as well.<br/>
      * For that purpose we provide some predefined dates which corresponds with the dates in the input data.
      */
     @Scheduled(cron = "${service.scheduling.cron}", zone = "${service.scheduling.timezone}")
     public void startCryptoProcessing() {
-        LocalDate date = LocalDate.now().minusDays(1); // yesterday (by default)
+        LocalDate date = LocalDate.now();
         List<LocalDate> predefinedDates = schedulingProperties.getPredefinedDates();
         log.info("Predefined date list has {} remaining items", predefinedDates.size());
         if (!predefinedDates.isEmpty()) {

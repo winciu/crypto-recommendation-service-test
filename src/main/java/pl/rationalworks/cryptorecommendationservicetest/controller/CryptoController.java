@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
+import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyDto;
 import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyFactorsDto;
 import pl.rationalworks.cryptorecommendationservicetest.properties.CryptoProperties;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
@@ -30,11 +31,11 @@ public class CryptoController {
     private final CryptoProperties cryptoProperties;
 
     @GetMapping(value = {"/ranking", "/ranking/{date}", "/ranking/{date}/{period}"})
-    public ResponseEntity<List<String>> cryptoRanking(@PathVariable("date")
-                                                      @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
-                                                      @PathVariable("period") Optional<FactorPeriod> period) {
-        LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
-        List<String> rankingList = cryptoCurrencyService.cryptoRanking(referenceDate, period.orElse(FactorPeriod.DAY));
+    public ResponseEntity<List<CryptoCurrencyDto>> cryptoRanking(@PathVariable("date")
+                                                                 @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
+                                                                 @PathVariable("period") Optional<FactorPeriod> period) {
+        LocalDate referenceDate = date.orElse(LocalDate.now());
+        List<CryptoCurrencyDto> rankingList = cryptoCurrencyService.cryptoRanking(referenceDate, period.orElse(FactorPeriod.DAY));
         return ResponseEntity.ok(rankingList);
     }
 
@@ -47,7 +48,7 @@ public class CryptoController {
         if (!cryptoProperties.getSupportedCurrencies().contains(symbol)) {
             return ResponseEntity.badRequest().build();
         }
-        LocalDate referenceDate = date.orElse(LocalDate.now().minusDays(1)); // yesterday (by default)
+        LocalDate referenceDate = date.orElse(LocalDate.now());
         FactorPeriod factorPeriod = period.orElse(FactorPeriod.DAY);
         Optional<CryptoRecentPriceFactors> factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
             factorPeriod);
@@ -59,6 +60,15 @@ public class CryptoController {
                 return ResponseEntity.ok(dto);
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping(value = {"/best", "/best/{date}", "/best/{date}/{period}"})
+    public ResponseEntity<CryptoCurrencyDto> obtainBestCrypto(@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
+                                                              @PathVariable("period") Optional<FactorPeriod> period) {
+        LocalDate referenceDate = date.orElse(LocalDate.now());
+        FactorPeriod factorPeriod = period.orElse(FactorPeriod.DAY);
+        Optional<CryptoCurrencyDto> cryptoCurrency = cryptoCurrencyService.getBestCrypto(referenceDate, factorPeriod);
+        return cryptoCurrency.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

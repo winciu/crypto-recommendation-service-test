@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.rationalworks.cryptorecommendationservicetest.data.CsvDataRecord;
 import pl.rationalworks.cryptorecommendationservicetest.model.*;
+import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyDto;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
@@ -86,10 +87,10 @@ public class CryptoCurrencyService {
             },
             f -> {
                 if (FactorPeriod.WEEK.equals(period)) {
-                    dailyRecentFactorRepository.updateWeeklyNormalizedFactor(f.getId(), f.getWeekNormalizedFactor());
+                    dailyRecentFactorRepository.updateWeeklyNormalizedFactor(f.getId(), f.getWeeklyNormalizedFactor());
                 }
                 if (FactorPeriod.MONTH.equals(period)) {
-                    dailyRecentFactorRepository.updateMonthlyNormalizedFactor(f.getId(), f.getMonthNormalizedFactor());
+                    dailyRecentFactorRepository.updateMonthlyNormalizedFactor(f.getId(), f.getMonthlyNormalizedFactor());
                 }
             }
         );
@@ -127,8 +128,10 @@ public class CryptoCurrencyService {
             .collect(toMap(CryptoDailyRecentFactors::getId, Function.identity()));
     }
 
-    public List<String> cryptoRanking(LocalDate date, FactorPeriod period) {
-        return dailyRecentFactorRepository.obtainDailyCryptoRanking(date);
+    public List<CryptoCurrencyDto> cryptoRanking(LocalDate date, FactorPeriod period) {
+        int noLimit = Integer.MAX_VALUE;
+        List<String> symbols = dailyRecentFactorRepository.selectBestCryptosByNormalizedFactor(date, period.name(), noLimit);
+        return symbols.stream().map(CryptoCurrencyDto::new).toList();
     }
 
     public Optional<CryptoRecentPriceFactors> getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
@@ -148,5 +151,14 @@ public class CryptoCurrencyService {
             case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(symbol, date, period.getDaysBack());
             default -> Optional.empty();
         };
+    }
+
+    public Optional<CryptoCurrencyDto> getBestCrypto(LocalDate date, FactorPeriod period) {
+        List<String> symbol = dailyRecentFactorRepository.selectBestCryptosByNormalizedFactor(date, period.name(), 1);
+        if (!symbol.isEmpty()) {
+            return Optional.of(new CryptoCurrencyDto(symbol.get(0)));
+        } else {
+            return Optional.empty();
+        }
     }
 }

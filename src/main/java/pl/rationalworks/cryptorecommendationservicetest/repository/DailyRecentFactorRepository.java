@@ -49,7 +49,7 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
     @Modifying
     @Query(value = """
         UPDATE CryptoDailyRecentFactors f
-        SET f.weekNormalizedFactor = :factor
+        SET f.weeklyNormalizedFactor = :factor
         WHERE f.id = :id
         """)
     void updateWeeklyNormalizedFactor(@Param("id") DailyRecentFactorId id,
@@ -58,22 +58,19 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
     @Modifying
     @Query(value = """
         UPDATE CryptoDailyRecentFactors f
-        SET f.monthNormalizedFactor = :factor
+        SET f.monthlyNormalizedFactor = :factor
         WHERE f.id = :id
         """)
     void updateMonthlyNormalizedFactor(@Param("id") DailyRecentFactorId id,
                                        @Param("factor") BigDecimal monthlyNormalizedFactor);
 
-    @Query(value = """
-        SELECT f.id.symbol
-        FROM CryptoDailyRecentFactors f
-        where f.id.referenceDate = :date
-        order by f.dailyNormalizedFactor desc
-        """)
-    List<String> obtainDailyCryptoRanking(@Param("date") LocalDate date);
-
     @Query(name = "evaluateAggregatedPriceFactors", nativeQuery = true)
     Optional<CryptoRecentPriceFactors> evaluateWeeklyPriceFactors(@Param("symbol") String symbol,
-                                                                 @Param("date") LocalDate date,
-                                                                 @Param("daysBack") int daysBack);
+                                                                  @Param("date") LocalDate date,
+                                                                  @Param("daysBack") int daysBack);
+
+    @Query(name = "selectCryptosByNormalizedFactorAndPeriod", nativeQuery = true)
+    List<String> selectBestCryptosByNormalizedFactor(@Param("date") LocalDate date,
+                                                     @Param("period") String period,
+                                                     @Param("lmt") int limit);
 }
