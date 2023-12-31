@@ -148,7 +148,21 @@ public class CryptoCurrencyService {
                     yield Optional.empty();
                 }
             }
-            case WEEK -> dailyRecentFactorRepository.evaluateWeeklyPriceFactors(symbol, date, period.getDaysBack());
+            case WEEK, MONTH -> {
+                // we need to execute 2 SQL queries to an issue with handling aggregated WITH statement by Spring/Hibernate
+                // if the issue is fixed it's enough to just call one service method (1 SQL query to get all the aggregated values)
+                // for details, see CryptoDailyRecentFactors class for the @NamedNativeQuery(name = "evaluateAggregatedPriceFactors")
+                Optional<CryptoRecentPriceFactors> firstFactors = dailyRecentFactorRepository.evaluateAggregatedMinMaxPriceFactors(symbol, date, period.getDaysBack());
+                if (firstFactors.isPresent()) {
+                    CryptoRecentPriceFactors factors = firstFactors.get();
+                    Optional<CryptoRecentPriceFactors> remainingFactors =
+                        dailyRecentFactorRepository.evaluateRestOfAggregatedPriceFactors(symbol, factors.oldestPriceDate(), factors.newestPriceDate());
+                    yield remainingFactors.map(rf -> new CryptoRecentPriceFactors(symbol, factors.minPrice(),
+                        factors.maxPrice(), rf.oldestPrice(), factors.oldestPriceDate(), rf.newestPrice(), factors.newestPriceDate()));
+                } else {
+                    yield Optional.empty();
+                }
+            }
             default -> Optional.empty();
         };
     }

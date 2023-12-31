@@ -14,13 +14,27 @@ import java.time.Instant;
  *
  */
 @NamedNativeQueries({
+    /*
+      Due to the issue in Spring/Hibernate this query is not executed properly.
+      Native database engine is executing that query correctly.
+      The problem is that here we are using AGG table inside (the 'FROM' clause) another 'WITH' table i.e. OLDEST_PRICE.
+      Hibernate/Spring does not handle that and no data is returned. There is no problem with having multiple 'WITH' tables.
+      Spring/Hibernate is fine with that. The problem occurs just when we want to use one of those 'WITH' tables as a reference in another 'WITH' table.
+
+      To solve this we need to split that WITH statement into 2 statements where in the first one we have query just AGG
+      table and in other WITH statement we pass in those values from AGG result set as input method parameters.
+      See below queries for details:
+       - evaluateAggregatedMinMaxPriceFactors
+       - evaluateRestOfAggregatedPriceFactors
+     */
     @NamedNativeQuery(name = "evaluateAggregatedPriceFactors",
         query = """
-            WITH AGG(min_price, max_price, oldest_price_date, newest_price_date) AS
+            WITH AGG(min_price, max_price, oldest_price_date, newest_price_date, symbol) AS
                      (select min(min_price)         as min_price,
                              max(max_price)         as max_price,
                              min(oldest_price_date) as oldest_price_date,
-                             max(newest_price_date) as newest_price_date
+                             max(newest_price_date) as newest_price_date,
+                             symbol
                       from daily_recent_factors
                       where DATEDIFF(DAY, :date, reference_date) > :daysBack
                         AND DATEDIFF(DAY, :date, reference_date) <= 0
@@ -43,6 +57,39 @@ import java.time.Instant;
                  NEWEST_PRICE np
             """,
         resultSetMapping = "aggregatedPriceFactorsMapping"),
+    @NamedNativeQuery(name = "evaluateAggregatedMinMaxPriceFactors",
+        query = """
+            WITH AGG(min_price, max_price, oldest_price_date, newest_price_date, symbol) AS
+                     (select min(min_price)         as min_price,
+                             max(max_price)         as max_price,
+                             min(oldest_price_date) as oldest_price_date,
+                             max(newest_price_date) as newest_price_date,
+                             symbol
+                      from daily_recent_factors
+                      where DATEDIFF(DAY, :date, reference_date) > :daysBack
+                        AND DATEDIFF(DAY, :date, reference_date) <= 0
+                        and symbol = :symbol)
+            select AGG.*
+            FROM AGG
+            """,
+        resultSetMapping = "aggregatedMinMaxPriceFactorsMapping"),
+    @NamedNativeQuery(name = "evaluateRestOfAggregatedPriceFactors",
+        query = """
+            WITH OLDEST_PRICE(symbol, oldest_price) AS
+                     (select f.symbol, f.oldest_price
+                      from daily_recent_factors f
+                      where f.oldest_price_date = :oldestPriceDate
+                        and f.symbol = :symbol),
+                 NEWEST_PRICE(symbol, newest_price) AS
+                     (select f.symbol, f.newest_price
+                      from daily_recent_factors f
+                      where f.newest_price_date = :newestPriceDate
+                        and f.symbol = :symbol)
+            select op.symbol, op.oldest_price, np.newest_price
+            FROM OLDEST_PRICE op,
+                 NEWEST_PRICE np
+            """,
+        resultSetMapping = "aggregatedRestOfPriceFactorsMapping"),
     @NamedNativeQuery(name = "selectCryptosByNormalizedFactorAndPeriod",
         query = """
             select f.symbol
@@ -63,17 +110,30 @@ import java.time.Instant;
 })
 @SqlResultSetMappings({
     @SqlResultSetMapping(
-        name = "aggregatedPriceFactorsMapping",
+        name = "aggregatedMinMaxPriceFactorsMapping",
         classes = {
             @ConstructorResult(
                 columns = {
+                    // order of those properties here matters (to match proper constructor)
                     @ColumnResult(name = "symbol", type = String.class),
                     @ColumnResult(name = "min_price", type = BigDecimal.class),
                     @ColumnResult(name = "max_price", type = BigDecimal.class),
-                    @ColumnResult(name = "oldest_price", type = BigDecimal.class),
                     @ColumnResult(name = "oldest_price_date", type = Instant.class),
-                    @ColumnResult(name = "newest_price", type = BigDecimal.class),
                     @ColumnResult(name = "newest_price_date", type = Instant.class)
+                },
+                targetClass = CryptoRecentPriceFactors.class
+            )
+        }
+    ),
+    @SqlResultSetMapping(
+        name = "aggregatedRestOfPriceFactorsMapping",
+        classes = {
+            @ConstructorResult(
+                columns = {
+                    // order of those properties here matters (to match proper constructor)
+                    @ColumnResult(name = "symbol", type = String.class),
+                    @ColumnResult(name = "oldest_price", type = BigDecimal.class),
+                    @ColumnResult(name = "newest_price", type = BigDecimal.class),
                 },
                 targetClass = CryptoRecentPriceFactors.class
             )

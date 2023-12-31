@@ -64,10 +64,15 @@ public interface DailyRecentFactorRepository extends CrudRepository<CryptoDailyR
     void updateMonthlyNormalizedFactor(@Param("id") DailyRecentFactorId id,
                                        @Param("factor") BigDecimal monthlyNormalizedFactor);
 
-    @Query(name = "evaluateAggregatedPriceFactors", nativeQuery = true)
-    Optional<CryptoRecentPriceFactors> evaluateWeeklyPriceFactors(@Param("symbol") String symbol,
-                                                                  @Param("date") LocalDate date,
-                                                                  @Param("daysBack") int daysBack);
+    @Query(name = "evaluateAggregatedMinMaxPriceFactors", nativeQuery = true)
+    Optional<CryptoRecentPriceFactors> evaluateAggregatedMinMaxPriceFactors(@Param("symbol") String symbol,
+                                                                            @Param("date") LocalDate date,
+                                                                            @Param("daysBack") int daysBack);
+
+    @Query(name = "evaluateRestOfAggregatedPriceFactors", nativeQuery = true)
+    Optional<CryptoRecentPriceFactors> evaluateRestOfAggregatedPriceFactors(@Param("symbol") String symbol,
+                                                                      @Param("oldestPriceDate") Instant oldestPriceDate,
+                                                                      @Param("newestPriceDate") Instant newestPriceDate);
 
     @Query(name = "selectCryptosByNormalizedFactorAndPeriod", nativeQuery = true)
     List<String> selectBestCryptosByNormalizedFactor(@Param("date") LocalDate date,
