@@ -37,8 +37,6 @@ public class CryptoCurrencyProcessingScheduler {
             predefinedDates.remove(0);
         }
         updateMinMaxFactors(date);
-        updateDailyOldestPriceFactors(date);
-        updateDailyNewestPriceFactors(date);
         evaluateWeeklyCryptosNormalizedRange(date);
         evaluateMonthlyCryptosNormalizedRange(date);
     }
@@ -62,19 +60,8 @@ public class CryptoCurrencyProcessingScheduler {
      */
     private void updateMinMaxFactors(LocalDate date) {
         log.info("Scheduled task UPDATE_MIN_MAX_FACTORS for {} started ...", date);
-        service.updateMinMaxFactorValuesForGivenDay(date);
+        service.evaluateDailyFactors(date);
         log.info("Scheduled task UPDATE_MIN_MAX_FACTORS for {} finished.", date);
     }
 
-    private void updateDailyOldestPriceFactors(LocalDate date) {
-        log.info("Scheduled task UPDATE_DAILY_OLDEST_PRICE for {} started ...", date);
-        service.updateDailyOldestPriceFactors(date);
-        log.info("Scheduled task UPDATE_DAILY_OLDEST_PRICE for {} finished.", date);
-    }
-
-    private void updateDailyNewestPriceFactors(LocalDate date) {
-        log.info("Scheduled task UPDATE_DAILY_NEWEST_PRICE for {} started ...", date);
-        service.updateDailyNewestPriceFactors(date);
-        log.info("Scheduled task UPDATE_DAILY_NEWEST_PRICE for {} finished.", date);
-    }
 }

@@ -13,7 +13,7 @@ import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
 import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyDto;
 import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyFactorsDto;
 import pl.rationalworks.cryptorecommendationservicetest.properties.CryptoProperties;
-import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
+import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoDailyPriceFactors;
 import pl.rationalworks.cryptorecommendationservicetest.service.CryptoCurrencyService;
 
 import java.time.LocalDate;
@@ -50,12 +50,12 @@ public class CryptoController {
         }
         LocalDate referenceDate = date.orElse(LocalDate.now());
         FactorPeriod factorPeriod = period.orElse(FactorPeriod.DAY);
-        Optional<CryptoRecentPriceFactors> factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
+        Optional<CryptoDailyPriceFactors> factors = cryptoCurrencyService.getCryptoPriceFactors(symbol, referenceDate,
             factorPeriod);
         return factors.
             map(f -> {
                 CryptoCurrencyFactorsDto dto = new CryptoCurrencyFactorsDto(f.symbol(), referenceDate,
-                    f.minPrice(), f.maxPrice(), f.oldestPrice(), f.oldestPriceDate(),
+                    f.minPrice(), f.minPriceDate(), f.maxPrice(), f.maxPriceDate(), f.oldestPrice(), f.oldestPriceDate(),
                     f.newestPrice(), f.newestPriceDate(), factorPeriod);
                 return ResponseEntity.ok(dto);
             })

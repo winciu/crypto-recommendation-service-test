@@ -11,7 +11,7 @@ import pl.rationalworks.cryptorecommendationservicetest.data.CsvDataRecord;
 import pl.rationalworks.cryptorecommendationservicetest.model.*;
 import pl.rationalworks.cryptorecommendationservicetest.model.dto.CryptoCurrencyDto;
 import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoCurrencyRepository;
-import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoRecentPriceFactors;
+import pl.rationalworks.cryptorecommendationservicetest.repository.CryptoDailyPriceFactors;
 import pl.rationalworks.cryptorecommendationservicetest.repository.DailyRecentFactorRepository;
 
 import java.time.LocalDate;
@@ -26,7 +26,6 @@ import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.toMap;
-import static pl.rationalworks.cryptorecommendationservicetest.model.CryptoDailyRecentFactors.setupDailyEvaluationFactors;
 
 @Service
 @Slf4j
@@ -48,42 +47,28 @@ public class CryptoCurrencyService {
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void updateMinMaxFactorValuesForGivenDay(LocalDate date) {
-        updateRecentFactors(cryptoCurrencyRepository.evaluateDailyFactors(date),
+    public void evaluateDailyFactors(LocalDate date) {
+        evaluateDailyFactors(cryptoCurrencyRepository.evaluateDailyFactors(date),
             record -> new DailyRecentFactorId(record.symbol(), date),
-            (fid, r) -> setupDailyEvaluationFactors(fid, r.minPrice(), r.maxPrice(), r.normalizedFactor()),
-            f -> dailyRecentFactorRepository.updateMinMaxFactorsByDate(f.getId(), f.getMinPrice(), f.getMaxPrice())
+            CryptoDailyAggregatedFactors::setupDailyEvaluationFactors,
+            f -> dailyRecentFactorRepository.updateMinMaxPriceFactors(f.getId(), f.getMinPrice(), f.getMinPriceDate(),
+                f.getMaxPrice(), f.getMaxPriceDate(), f.getOldestPrice(), f.getOldestPriceDate(),
+                f.getNewestPrice(), f.getNewestPriceDate(), f.getDailyNormalizedFactor())
         );
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void updateDailyOldestPriceFactors(LocalDate date) {
-        updateRecentFactors(cryptoCurrencyRepository.fetchDailyOldestPrice(date),
-            cc -> new DailyRecentFactorId(cc.getId().getSymbol(), cc.getDate()),
-            (fid, cc) -> CryptoDailyRecentFactors.setupOldestPriceFactors(fid, cc.getPrice(), cc.getId().getTimestamp()),
-            f -> dailyRecentFactorRepository.updateOldestPriceFactors(f.getId(), f.getOldestPrice(), f.getOldestPriceDate()));
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void updateDailyNewestPriceFactors(LocalDate date) {
-        updateRecentFactors(cryptoCurrencyRepository.fetchDailyNewestPrice(date),
-            cc -> new DailyRecentFactorId(cc.getId().getSymbol(), cc.getDate()),
-            (fid, cc) -> CryptoDailyRecentFactors.setupNewestPriceFactors(fid, cc.getPrice(), cc.getId().getTimestamp()),
-            f -> dailyRecentFactorRepository.updateNewestPriceFactors(f.getId(), f.getNewestPrice(), f.getNewestPriceDate()));
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void evaluateNormalizedFactors(LocalDate date, FactorPeriod period) {
-        updateRecentFactors(cryptoCurrencyRepository.fetchNormalizedFactors(date, period.getDaysBack()),
+        evaluateDailyFactors(cryptoCurrencyRepository.fetchNormalizedFactors(date, period.getDaysBack()),
             nf -> new DailyRecentFactorId(nf.symbol(), date),
             (fid, nf) -> {
                 if (FactorPeriod.WEEK.equals(period)) {
-                    return CryptoDailyRecentFactors.setupNormalizedWeeklyFactors(fid, nf.factorValue());
+                    return CryptoDailyAggregatedFactors.setupNormalizedWeeklyFactors(fid, nf.factorValue());
                 }
                 if (FactorPeriod.MONTH.equals(period)) {
-                    return CryptoDailyRecentFactors.setupNormalizedMonthlyFactors(fid, nf.factorValue());
+                    return CryptoDailyAggregatedFactors.setupNormalizedMonthlyFactors(fid, nf.factorValue());
                 }
-                return new CryptoDailyRecentFactors(); // an empty factor (be default, just in case)
+                return new CryptoDailyAggregatedFactors(); // an empty factor (be default, just in case)
             },
             f -> {
                 if (FactorPeriod.WEEK.equals(period)) {
@@ -96,21 +81,21 @@ public class CryptoCurrencyService {
         );
     }
 
-    private <IN> void updateRecentFactors(List<IN> cryptoCurrencies,
-                                          Function<IN, DailyRecentFactorId> factorIdKeyMapperFunction,
-                                          BiFunction<DailyRecentFactorId, IN, CryptoDailyRecentFactors> cryptoFactorSupplier,
-                                          Consumer<CryptoDailyRecentFactors> updateMethodSupplier) {
+    private <IN> void evaluateDailyFactors(List<IN> cryptoCurrencies,
+                                           Function<IN, DailyRecentFactorId> factorIdKeyMapperFunction,
+                                           BiFunction<DailyRecentFactorId, IN, CryptoDailyAggregatedFactors> cryptoFactorSupplier,
+                                           Consumer<CryptoDailyAggregatedFactors> updateMethodSupplier) {
         //attach factor ids
         Map<DailyRecentFactorId, IN> cryptosWithFactorIds = cryptoCurrencies.stream()
             .collect(toMap(factorIdKeyMapperFunction, Function.identity()));
         // fetch existing factors
-        Map<DailyRecentFactorId, CryptoDailyRecentFactors> existingFactors = fetchExistingFactors(cryptosWithFactorIds.keySet());
+        Map<DailyRecentFactorId, CryptoDailyAggregatedFactors> existingFactors = fetchExistingFactors(cryptosWithFactorIds.keySet());
 
-        List<CryptoDailyRecentFactors> newFactors = new ArrayList<>();
-        List<CryptoDailyRecentFactors> toBeUpdatedFactors = new ArrayList<>();
+        List<CryptoDailyAggregatedFactors> newFactors = new ArrayList<>();
+        List<CryptoDailyAggregatedFactors> toBeUpdatedFactors = new ArrayList<>();
 
         cryptosWithFactorIds.forEach((fid, cc) -> {
-            CryptoDailyRecentFactors factors = cryptoFactorSupplier.apply(fid, cc);
+            CryptoDailyAggregatedFactors factors = cryptoFactorSupplier.apply(fid, cc);
             if (existingFactors.containsKey(fid)) { // it's an update
                 toBeUpdatedFactors.add(factors);
             } else { // it's an insert
@@ -121,11 +106,11 @@ public class CryptoCurrencyService {
         dailyRecentFactorRepository.saveAll(newFactors);
     }
 
-    private Map<DailyRecentFactorId, CryptoDailyRecentFactors> fetchExistingFactors(Iterable<DailyRecentFactorId> factorIds) {
-        Iterable<CryptoDailyRecentFactors> factorsById = dailyRecentFactorRepository.findAllById(factorIds);
+    private Map<DailyRecentFactorId, CryptoDailyAggregatedFactors> fetchExistingFactors(Iterable<DailyRecentFactorId> factorIds) {
+        Iterable<CryptoDailyAggregatedFactors> factorsById = dailyRecentFactorRepository.findAllById(factorIds);
         return StreamSupport
             .stream(factorsById.spliterator(), false)
-            .collect(toMap(CryptoDailyRecentFactors::getId, Function.identity()));
+            .collect(toMap(CryptoDailyAggregatedFactors::getId, Function.identity()));
     }
 
     public List<CryptoCurrencyDto> cryptoRanking(LocalDate date, FactorPeriod period) {
@@ -134,36 +119,23 @@ public class CryptoCurrencyService {
         return symbols.stream().map(CryptoCurrencyDto::new).toList();
     }
 
-    public Optional<CryptoRecentPriceFactors> getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
-                                                          LocalDate date, FactorPeriod period) {
+    public Optional<CryptoDailyPriceFactors> getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
+                                                                   LocalDate date, FactorPeriod period) {
         return switch (period) {
             case DAY -> {
-                Optional<CryptoDailyRecentFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
+                Optional<CryptoDailyAggregatedFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
                 if (dailyFactors.isPresent()) {
                     yield dailyFactors
-                        .map(df -> new CryptoRecentPriceFactors(df.getId().getSymbol(),
-                            df.getMinPrice(), df.getMaxPrice(), df.getOldestPrice(), df.getOldestPriceDate(),
-                            df.getNewestPrice(), df.getNewestPriceDate()));
+                        .map(df -> new CryptoDailyPriceFactors(df.getId().getSymbol(),
+                            df.getMinPrice(), df.getMinPriceDate(), df.getMaxPrice(), df.getMaxPriceDate(),
+                            df.getOldestPrice(), df.getOldestPriceDate(),
+                            df.getNewestPrice(), df.getNewestPriceDate(), df.getDailyNormalizedFactor()));
                 } else {
                     yield Optional.empty();
                 }
             }
-            case WEEK, MONTH -> {
-                // we need to execute 2 SQL queries to an issue with handling aggregated WITH statement by Spring/Hibernate
-                // if the issue is fixed it's enough to just call one service method (1 SQL query to get all the aggregated values)
-                // for details, see CryptoDailyRecentFactors class for the @NamedNativeQuery(name = "evaluateAggregatedPriceFactors")
-                Optional<CryptoRecentPriceFactors> firstFactors = dailyRecentFactorRepository.evaluateAggregatedMinMaxPriceFactors(symbol, date, period.getDaysBack());
-                if (firstFactors.isPresent()) {
-                    CryptoRecentPriceFactors factors = firstFactors.get();
-                    Optional<CryptoRecentPriceFactors> remainingFactors =
-                        dailyRecentFactorRepository.evaluateRestOfAggregatedPriceFactors(symbol, factors.oldestPriceDate(), factors.newestPriceDate());
-                    yield remainingFactors.map(rf -> new CryptoRecentPriceFactors(symbol, factors.minPrice(),
-                        factors.maxPrice(), rf.oldestPrice(), factors.oldestPriceDate(), rf.newestPrice(), factors.newestPriceDate()));
-                } else {
-                    yield Optional.empty();
-                }
-            }
-            default -> Optional.empty();
+            case WEEK, MONTH ->
+                dailyRecentFactorRepository.evaluateAggregatedMinMaxPriceFactors(symbol, date, period.getDaysBack());
         };
     }
 

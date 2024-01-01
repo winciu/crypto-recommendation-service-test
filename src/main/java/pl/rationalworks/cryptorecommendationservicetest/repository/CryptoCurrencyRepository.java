@@ -18,13 +18,7 @@ public interface CryptoCurrencyRepository extends CrudRepository<CryptoCurrency,
      * @return list of records with evaluate daily factors for particular day and cryptocurrency
      */
     @Query(name = "evaluateDailyFactorsGroupBySymbol", nativeQuery = true)
-    List<DailyEvaluationRecord> evaluateDailyFactors(@Param("date") LocalDate date);
-
-    @Query(name = "selectDailyOldestPrice", nativeQuery = true)
-    List<CryptoCurrency> fetchDailyOldestPrice(@Param("date") LocalDate date);
-
-    @Query(name = "selectDailyNewestPrice", nativeQuery = true)
-    List<CryptoCurrency> fetchDailyNewestPrice(@Param("date") LocalDate date);
+    List<CryptoDailyPriceFactors> evaluateDailyFactors(@Param("date") LocalDate date);
 
     /**
      * @param date   a data from which to start aggregating data for evaluating normalized factor (inclusive)
