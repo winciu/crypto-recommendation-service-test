@@ -14,7 +14,7 @@ Based on the provided data (timestamp and price) the service calculates the foll
 
 The normalized factors are calculated using the below formula (with respect to the actual date period used):
 ```math
-normalized_factor = \frac{max_price - min_price}{min_price}
+normalized\_factor = \frac{max\_price - min\_price}{min\_price}
 ```
 
 # Input data files
