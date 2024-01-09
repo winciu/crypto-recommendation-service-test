@@ -83,7 +83,7 @@ The same rules for those input variables apply for all endpoints.
 This endpoint returns a descending sorted list of all cryptos using a normalized factor as a comparator. \
 Example request:
 
-    curl  "http://localhost:8082/cryptos/ranking/2022-01-07/WEEK"
+    curl  "http://localhost:8082/api/cryptos/ranking/2022-01-07/WEEK"
 
 Example response:
 
@@ -109,10 +109,10 @@ Example response:
 ```
 
 #### GET /api/cryptos/{symbol}
-This endpoint returns price factors related to the requested crypto. The `symbol` variable is used to specify the cryptocurrency ticker. It must match the following regular expression: `[A-Z]{3,6}`. \
+This endpoint returns price factors related to the requested crypto. The `symbol` variable is used to specify the cryptocurrency ticker. It must match the following regular expression: `[A-Z]{2,6}`. \
 Example request:
 
-    curl  "http://localhost:8082/cryptos/ETH/factors/2022-01-10/WEEK"
+    curl  "http://localhost:8082/api/cryptos/ETH/factors/2022-01-10/WEEK"
 
 Example response:
 ```json
@@ -135,7 +135,7 @@ Example response:
 This endpoint returns a cryptocurrency with the highest normalized factor for the specified period. \
 Example request:
 
-    curl "http://localhost:8082/cryptos/best/2022-01-04"
+    curl "http://localhost:8082/api/cryptos/best/2022-01-04"
 
 Example response:
 ```json
@@ -155,6 +155,14 @@ the service, go to the web browser and type:
 This service is using the H2 relation database and stores the data (fetched exchange rates) in memory.
 If you would like to use another DB then please specify all the required connection information in the
 `application.yaml` file or by using parameters in the command line during service startup.
+
+# Containerizing
+
+Make sure Docker/Podman is running i.e. `ps aux | grep docker`
+
+0. Go to project root folder
+1. Build an image: `docker build --tag=crypto-recommendation-service:latest .`
+2. Run the container: `docker run crypto-recommendation-service:latest`
 
 ---
 Please notice that the default service port is `8082`.

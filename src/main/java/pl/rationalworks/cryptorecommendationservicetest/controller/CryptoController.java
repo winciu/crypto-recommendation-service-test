@@ -68,9 +68,10 @@ public class CryptoController {
             content = @Content)})
     public ResponseEntity<CryptoCurrencyFactorsDto> obtainCryptoPriceFactors(
         @PathVariable("symbol")
-        @Pattern(regexp = "[A-Z]{3,6}", message = "Cryptocurrency symbol must match '[A-Z]{3,6}'") String symbol,
+        @Pattern(regexp = "[A-Z]{2,6}", message = "Cryptocurrency symbol must match '[A-Z]{3,6}'") String symbol,
         @PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") Optional<LocalDate> date,
         @PathVariable("period") Optional<FactorPeriod> period) {
+        //Instead, from reading those from properties, it would be better read it from the database and store those in a cache
         if (!cryptoProperties.getSupportedCurrencies().contains(symbol)) {
             return ResponseEntity.badRequest().build();
         }

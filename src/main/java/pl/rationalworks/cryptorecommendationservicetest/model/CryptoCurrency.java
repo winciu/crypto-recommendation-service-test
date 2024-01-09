@@ -58,7 +58,12 @@ import java.time.LocalDate;
             from AGG
             group by symbol;
             """,
-        resultSetMapping = "normalizedFactorMapping")
+        resultSetMapping = "normalizedFactorMapping"),
+    @NamedNativeQuery(name = "findDistinctDatesForUnprocessedEntries",
+    query = """
+            select distinct date from crypto_currencies where processed = false
+            """,
+    resultClass = LocalDate.class)
 })
 @SqlResultSetMappings({
     @SqlResultSetMapping(
@@ -112,5 +117,8 @@ public class CryptoCurrency {
 
     @Column(name = "price", nullable = false, precision = 16, scale = 5)
     private BigDecimal price;
+
+    @Column(name = "processed", nullable = false)
+    private boolean processed;
 
 }

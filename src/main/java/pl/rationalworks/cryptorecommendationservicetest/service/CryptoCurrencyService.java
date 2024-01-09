@@ -1,7 +1,5 @@
 package pl.rationalworks.cryptorecommendationservicetest.service;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,7 +38,7 @@ public class CryptoCurrencyService {
         List<CryptoCurrency> cryptoCurrencies = dataRecords.stream()
                 .map(r -> {
                     CryptoCurrencyId id = new CryptoCurrencyId(r.timestamp(), r.symbol());
-                    return new CryptoCurrency(id, LocalDate.ofInstant(r.timestamp(), ZoneId.of("GMT")), r.price());
+                    return new CryptoCurrency(id, LocalDate.ofInstant(r.timestamp(), ZoneId.of("GMT")), r.price(), false);
                 })
                 .toList();
         cryptoCurrencyRepository.saveAll(cryptoCurrencies);
@@ -119,8 +117,7 @@ public class CryptoCurrencyService {
         return symbols.stream().map(CryptoCurrencyDto::new).toList();
     }
 
-    public Optional<CryptoDailyPriceFactors> getCryptoPriceFactors(@NotBlank @Pattern(regexp = "[A-Z]{3,6}") String symbol,
-                                                                   LocalDate date, FactorPeriod period) {
+    public Optional<CryptoDailyPriceFactors> getCryptoPriceFactors(String symbol, LocalDate date, FactorPeriod period) {
         return switch (period) {
             case DAY -> {
                 Optional<CryptoDailyAggregatedFactors> dailyFactors = dailyRecentFactorRepository.findById(new DailyRecentFactorId(symbol, date));
@@ -146,5 +143,15 @@ public class CryptoCurrencyService {
         } else {
             return Optional.empty();
         }
+    }
+
+    public List<LocalDate> findUnprocessedDates() {
+        return cryptoCurrencyRepository.selectAllDistinctDatesForUnprocessedEntries();
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public void markDataAsProcessed(LocalDate date) {
+        log.info("Marking data rows as processed for {}", date);
+        cryptoCurrencyRepository.markDataAsProcessed(date);
     }
 }

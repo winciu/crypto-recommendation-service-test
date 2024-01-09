@@ -6,11 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import pl.rationalworks.cryptorecommendationservicetest.model.FactorPeriod;
-import pl.rationalworks.cryptorecommendationservicetest.properties.SchedulingProperties;
 import pl.rationalworks.cryptorecommendationservicetest.service.CryptoCurrencyService;
 
 import java.time.LocalDate;
 import java.util.List;
+
+import static java.time.LocalDate.now;
 
 @Component
 @Slf4j
@@ -19,26 +20,26 @@ import java.util.List;
 public class CryptoCurrencyProcessingScheduler {
 
     private final CryptoCurrencyService service;
-    private final SchedulingProperties schedulingProperties;
 
     /**
      * By default, scheduler should process all entries starting from the current day (today).
-     * However, due to the fact that the input data has totally different dates we need to add some logic
-     * for processing those 'additional'/'not up-to-date' entries as well.<br/>
-     * For that purpose we provide some predefined dates which corresponds with the dates in the input data.
      */
     @Scheduled(cron = "${service.scheduling.cron}", zone = "${service.scheduling.timezone}")
     public void startCryptoProcessing() {
-        LocalDate date = LocalDate.now();
-        List<LocalDate> predefinedDates = schedulingProperties.getPredefinedDates();
-        log.info("Predefined date list has {} remaining items", predefinedDates.size());
-        if (!predefinedDates.isEmpty()) {
-            date = predefinedDates.get(0);
-            predefinedDates.remove(0);
+        LocalDate date = now();
+        List<LocalDate> unprocessedDates = service.findUnprocessedDates();
+        log.info("Unprocessed dates' list has {} remaining items: {}", unprocessedDates.size(), unprocessedDates);
+        if (!unprocessedDates.isEmpty()) {
+            date = unprocessedDates.get(0);
         }
         updateMinMaxFactors(date);
         evaluateWeeklyCryptosNormalizedRange(date);
         evaluateMonthlyCryptosNormalizedRange(date);
+        setRowsAsProcessed(date);
+    }
+
+    private void setRowsAsProcessed(LocalDate date) {
+        service.markDataAsProcessed(date);
     }
 
     private void evaluateWeeklyCryptosNormalizedRange(LocalDate date) {

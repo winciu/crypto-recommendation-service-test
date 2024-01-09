@@ -1,5 +1,6 @@
 package pl.rationalworks.cryptorecommendationservicetest.repository;
 
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -21,12 +22,21 @@ public interface CryptoCurrencyRepository extends CrudRepository<CryptoCurrency,
     List<CryptoDailyPriceFactors> evaluateDailyFactors(@Param("date") LocalDate date);
 
     /**
-     * @param date   a data from which to start aggregating data for evaluating normalized factor (inclusive)
-     * @param daysBack Number of days back to calculate normalized factor.
+     * @param date   a data from which to start aggregating data for evaluating a normalized factor (inclusive)
+     * @param daysBack Number of days back to calculate a normalized factor.
      * @return list of {@link NormalizedFactor} instance for each cryptocurrency symbol
      */
     @Query(name = "selectNormalizedFactorsGroupBySymbol", nativeQuery = true)
     List<NormalizedFactor> fetchNormalizedFactors(@Param("date") LocalDate date, @Param("daysBack") int daysBack);
+
+    @Query(name = "findDistinctDatesForUnprocessedEntries")
+    List<LocalDate> selectAllDistinctDatesForUnprocessedEntries();
+
+    @Query(value = """
+        update CryptoCurrency set processed = true where date = :date
+        """)
+    @Modifying
+    void markDataAsProcessed(@Param("date") LocalDate date);
 }
 
 
